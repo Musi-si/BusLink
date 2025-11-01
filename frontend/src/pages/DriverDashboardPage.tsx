@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { UpdateBusLocationDialog } from '@/components/driver/UpdateBusLocationDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const DriverDashboardPage = () => {
   const { user } = useAuthStore();
@@ -118,6 +119,120 @@ const DriverDashboardPage = () => {
   // import { useQuery, useQueryClient } from '@tanstack/react-query';
 
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Detect whether geolocation is available/allowed in the browser.
+  // null = unknown, true = available, false = unavailable/denied
+  const [gpsAvailable, setGpsAvailable] = useState<boolean | null>(null);
+  // Allow ops/dev to enable manual location via env flag
+  const manualEnabled = (import.meta.env.VITE_ENABLE_MANUAL_LOCATION === 'true');
+
+  // GPS tracking state
+  const [isTracking, setIsTracking] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+  const lastSentRef = useRef<number>(0);
+
+  // Helper to send a location update to the backend
+  async function sendLocationUpdate(lat: number, lng: number, speed?: number) {
+    try {
+      await axiosInstance.patch('/api/driver/update-location', {
+        bus_number: assignedBus?.bus_number,
+        current_lat: lat,
+        current_lng: lng,
+        speed_kmh: speed ?? 0,
+        source: 'gps',
+      });
+    } catch (err) {
+      // swallow here; UI may surface errors if needed
+      // console.error('Failed to send location update', err);
+    }
+  }
+
+  function startTracking() {
+    if (!navigator.geolocation) {
+      toast({ title: 'Geolocation unavailable', description: 'Geolocation is not supported by your browser. You can update location manually.', variant: 'destructive' });
+      setGpsAvailable(false);
+      return;
+    }
+
+    // Ask for permission and start watching position
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        // If we receive a successful position, the user has allowed location access.
+        setGpsAvailable(true);
+        const now = Date.now();
+        // throttle to at most once every 3s
+        if (now - lastSentRef.current < 3000) return;
+        lastSentRef.current = now;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const speed = pos.coords.speed ?? 0;
+        sendLocationUpdate(lat, lng, speed);
+        // optionally, update UI by invalidating query
+        void queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] });
+      },
+      (err) => {
+        // permission denied or other errors
+        console.error('Geolocation error', err);
+        setGpsAvailable(false);
+        toast({ title: 'Unable to access location', description: 'Please enable location services and try again. You can update location manually as a fallback.', variant: 'destructive' });
+        stopTracking();
+      },
+      { enableHighAccuracy: true, maximumAge: 1000 }
+    );
+
+    watchIdRef.current = id as unknown as number;
+    setIsTracking(true);
+  }
+
+  function stopTracking() {
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+    watchIdRef.current = null;
+    setIsTracking(false);
+  }
+
+  // cleanup on unmount
+  useEffect(() => {
+    return () => stopTracking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // On mount, query the Permissions API (if available) to detect if geolocation
+  // was already granted or denied. Listen for changes so the manual button can
+  // hide automatically if/when the user allows location access.
+  useEffect(() => {
+    if (!navigator.permissions) {
+      // Permissions API unavailable; keep gpsAvailable as null so manual button may show as fallback
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        // @ts-ignore - lib.dom types include GeolocationPermissionName in newer TS versions
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        if (!mounted) return;
+        if (status.state === 'granted') setGpsAvailable(true);
+        else if (status.state === 'denied') setGpsAvailable(false);
+        else setGpsAvailable(null);
+
+        // Update gpsAvailable on permission changes
+        status.onchange = () => {
+          if (status.state === 'granted') setGpsAvailable(true);
+          else if (status.state === 'denied') setGpsAvailable(false);
+          else setGpsAvailable(null);
+        };
+      } catch (err) {
+        // Ignore and retain current gpsAvailable state
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function refetchAssignedBus() {
     // Invalidate the assigned-bus query so react-query will refetch it.
@@ -315,7 +430,16 @@ const DriverDashboardPage = () => {
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Assigned Bus Details</h2>
-                  <Button onClick={() => setIsLocationDialogOpen(true)} size="sm">Update Location</Button>
+                  <div className="flex items-center gap-2">
+                    {(manualEnabled || gpsAvailable === false) && (
+                      <Button onClick={() => setIsLocationDialogOpen(true)} size="sm">Update Location</Button>
+                    )}
+                    {isTracking ? (
+                      <Button size="sm" variant="destructive" onClick={() => stopTracking()}>Stop Tracking</Button>
+                    ) : (
+                      <Button size="sm" onClick={() => startTracking()}>Start Trip</Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -331,12 +455,12 @@ const DriverDashboardPage = () => {
 
                   <div>
                     <p className="text-xs text-muted-foreground">Current Speed</p>
-                    <p className="font-medium">{assignedBus.speed_kmh.toFixed(1)} km/h</p>
+                    <p className="font-medium">{(Number(assignedBus.speed_kmh) || 0).toFixed(1)} km/h</p>
                   </div>
 
                   <div>
                     <p className="text-xs text-muted-foreground">Current Location</p>
-                    <p className="font-medium">{assignedBus.current_lat.toFixed(4)}, {assignedBus.current_lng.toFixed(4)}</p>
+                    <p className="font-medium">{(Number(assignedBus.current_lat) || 0).toFixed(4)}, {(Number(assignedBus.current_lng) || 0).toFixed(4)}</p>
                   </div>
                 </div>
               </Card>

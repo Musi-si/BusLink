@@ -65,5 +65,7 @@ router.get('/my-bus', driverController.getActiveBusForDriver);
  *         description: No bus is assigned to the driver.
  */
 router.get('/my-bus/bookings', driverController.getBusBookings);
+// Receive GPS/location updates from the driver (browser/mobile)
+router.patch('/update-location', driverController.updateLocation);
 
 export default router;

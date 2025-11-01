@@ -103,6 +103,57 @@ class DriverController {
     
     res.status(200).json({ success: true, data: bus });
   });
+
+  /**
+   * Update a bus's current location (from driver mobile/browser GPS).
+   * PATCH /api/driver/update-location
+   */
+  updateLocation = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { bus_number, current_lat, current_lng, speed_kmh, source = 'gps' } = req.body as any;
+
+    if (!bus_number || typeof current_lat !== 'number' || typeof current_lng !== 'number') {
+      throw new AppError('bus_number, current_lat and current_lng are required and must be numbers', 400);
+    }
+
+    // Ensure the authenticated driver actually owns/operates this bus
+    const driverProfile = await prisma.driver.findUnique({ where: { userId: req.user!.id } });
+    if (!driverProfile) {
+      throw new AppError('Driver profile not found for the authenticated user.', 404);
+    }
+
+    const bus = await prisma.bus.findUnique({ where: { busNumber: bus_number } });
+    if (!bus) {
+      throw new AppError('Bus not found', 404);
+    }
+
+    if (bus.driverId !== driverProfile.id) {
+      throw new AppError('This bus is not assigned to you', 403);
+    }
+
+    // Update bus last location and speed
+    const updated = await prisma.bus.update({
+      where: { id: bus.id },
+      data: {
+        lastLocationLat: current_lat,
+        lastLocationLng: current_lng,
+        lastSpeedKmh: speed_kmh ?? undefined,
+        lastUpdate: new Date(),
+      },
+    });
+
+    // Create a location update record for history and analytics
+    await prisma.locationUpdate.create({
+      data: {
+        busId: bus.id,
+        latitude: current_lat,
+        longitude: current_lng,
+        speedKmh: speed_kmh ?? undefined,
+        source: source as any,
+      },
+    });
+
+    return res.status(200).json({ success: true, data: updated });
+  });
 }
 
 export const driverController = new DriverController();
