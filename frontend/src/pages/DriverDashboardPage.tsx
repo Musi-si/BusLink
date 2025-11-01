@@ -27,7 +27,26 @@ const DriverDashboardPage = () => {
       // CORRECT ENDPOINT: Fetches the single bus assigned to the authenticated driver.
       const response = await axiosInstance.get('/api/driver/my-bus');
       // The actual data is nested in `response.data.data`.
-      return response.data.data as BusWithRelations; 
+      const b = response.data.data as any;
+      // Backend returns camelCase names (Prisma model): busNumber, vehiclePlate, lastLocationLat, lastLocationLng, lastSpeedKmh
+      // Map to the frontend's expected shape used across this page for minimal changes.
+      const mapped = {
+        id: b.id,
+        bus_number: b.busNumber || b.bus_number || b.bus_number,
+        vehicle_plate: b.vehiclePlate || b.vehicle_plate,
+        vehicle_model: b.vehicleModel || b.vehicle_model,
+        capacity: b.capacity ?? 30,
+        current_lat: b.lastLocationLat ?? b.current_lat ?? 0,
+        current_lng: b.lastLocationLng ?? b.current_lng ?? 0,
+        speed_kmh: Number(b.lastSpeedKmh ?? b.speed_kmh ?? 0) || 0,
+        status: b.status,
+        route: b.route,
+        driver: b.driver,
+        // keep original for any downstream needs
+        _raw: b,
+      } as unknown as BusWithRelations;
+
+      return mapped;
     },
     // This query will only run if a user is logged in and their role is 'driver'.
     enabled: !!user && user.role === 'driver',
