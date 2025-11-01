@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" fill="none">
+  <rect width="1200" height="800" rx="24" fill="url(#bg)" />
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0FFF4" />
+      <stop offset="1" stop-color="#ECFDF5" />
+    </linearGradient>
+  </defs>
+  <!-- Simple bus and map markers illustration -->
+  <g transform="translate(80,80)">
+    <rect x="20" y="200" width="520" height="240" rx="24" fill="#9AE6B4" />
+    <rect x="40" y="220" width="480" height="200" rx="18" fill="#047857" />
+    <circle cx="120" cy="380" r="28" fill="#0F172A" />
+    <circle cx="440" cy="380" r="28" fill="#0F172A" />
+    <rect x="80" y="240" width="360" height="120" rx="8" fill="#A7F3D0" />
+    <rect x="100" y="260" width="80" height="24" rx="6" fill="#064E3B" />
+    <rect x="200" y="260" width="120" height="24" rx="6" fill="#064E3B" />
+
+    <!-- Map with route line -->
+    <g transform="translate(640,40)">
+      <rect width="360" height="360" rx="18" fill="#FFFFFF" stroke="#D1FAE5" stroke-width="2" />
+      <path d="M40 300 C120 220, 200 260, 320 160" stroke="#10B981" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx="40" cy="300" r="10" fill="#10B981" />
+      <circle cx="320" cy="160" r="14" fill="#065F46" />
+    </g>
+
+    <!-- People icons -->
+    <g transform="translate(60,20)">
+      <circle cx="640" cy="420" r="20" fill="#F97316" />
+      <circle cx="700" cy="420" r="20" fill="#60A5FA" />
+      <rect x="620" y="440" width="120" height="20" rx="10" fill="#FDE68A" />
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    /* --- Project Environment --- */
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "sourceMap": true,
+
+    /* --- Strictness & Code Quality --- */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* --- Module Interoperability --- */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    
+    /* --- Path Aliases for Clean Imports --- */
+    "baseUrl": "./", // Base is the project root
+    "paths": {
+      "@/*": ["src/*"], // Alias @/ to the src/ folder
+      "@/lib/*": ["src/lib/*"],
+      "@/routes/*": ["src/routes/*"],
+      "@/controllers/*": ["src/controllers/*"],
+      "@/middleware/*": ["src/middleware/*"],
+      "@/utils/*": ["src/utils/*"]
+    }
+  },
+  // --- ADD THIS BLOCK TO EXPLICITLY CONFIGURE TS-NODE ---
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["src/**/*.ts", "prisma/**/*.ts"], // Now correctly looks for src/ and prisma/
+  "exclude": ["node_modules", "dist"]
+}
