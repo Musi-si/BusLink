@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { axiosInstance } from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,34 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const { toast } = useToast();
+  const location = useLocation();
+
+  // If the user arrived with a verification token (from the email link), call
+  // the backend verify endpoint and show a success toast. Then remove the
+  // query param so the action isn't repeated on refresh.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const verifyToken = params.get('verifyToken') || params.get('token');
+    if (!verifyToken) return;
+
+    (async () => {
+      try {
+        // Using responseType 'text' because the endpoint returns HTML on success.
+        const resp = await axiosInstance.get('/api/auth/verify', { params: { token: verifyToken }, responseType: 'text' });
+        if (resp.status === 200) {
+          toast({ title: 'Email verified', description: 'Your email was verified successfully. You can now log in.' });
+        } else {
+          toast({ title: 'Verification', description: 'Email verification completed.', variant: 'destructive' });
+        }
+      } catch (err: any) {
+        // Backend returns HTML on error too; show a generic message.
+        toast({ title: 'Verification failed', description: err?.response?.data || 'Verification link is invalid or expired', variant: 'destructive' });
+      } finally {
+        // Remove query param to avoid repeated verification attempts on refresh
+        navigate('/login', { replace: true });
+      }
+    })();
+  }, [location.search, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

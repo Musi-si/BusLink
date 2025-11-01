@@ -14,12 +14,12 @@ export default function EmailVerification() {
           </div>
           <CardTitle className="text-2xl text-center">Check your email</CardTitle>
           <CardDescription className="text-center">
-            We have sent you a verification link to complete your registration. Please check your inbox and spam folder.
+            We have sent a verification link to your email. Please check your inbox to complete registration.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
-          <p className="text-muted-foreground">
-            The verification link will expire in 15 minutes. If you don&apos;t see the email, please check your spam folder.
+          <p className="text-sm text-muted-foreground">
+            <span className="text-primary font-bold">The verification link will expire in 15 minutes.</span><br /> If you don&apos;t see the email, please check your spam folder.
           </p>
           <p className="text-sm text-muted-foreground">
             You can close this window. After verifying your email, you&apos;ll be able to log in to your account.

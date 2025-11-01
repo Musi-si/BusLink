@@ -43,8 +43,11 @@ export class AuthController {
         vehicle_capacity,
       };
 
-      const token = jwt.sign(verificationPayload, SECRET, { expiresIn: '15m' });
-      const url = `http://localhost:3000/api/auth/verify?token=${token}`;
+  const token = jwt.sign(verificationPayload, SECRET, { expiresIn: '15m' });
+  // Send users to the frontend login page with the verification token so the
+  // frontend can call the verify API and display the success toast there.
+  const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
+  const url = `${frontendUrl.replace(/\/$/, '')}/login?verifyToken=${token}`;
 
       const htmlEmail = `
         <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px;">
@@ -161,12 +164,13 @@ export class AuthController {
         }
       });
 
-      const successHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head><title>Email Verified Successfully</title><style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background-color:#f3f4f6}.container{background:white;padding:2rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center;max-width:400px}.success-icon{color:#10b981;font-size:48px;margin-bottom:1rem}h1{color:#1f2937;margin-bottom:1rem}p{color:#6b7280;margin-bottom:2rem;line-height:1.5}.btn{background-color:#2563eb;color:white;padding:12px 24px;border:none;border-radius:6px;font-size:16px;cursor:pointer;text-decoration:none;display:inline-block;transition:background-color .3s}.btn:hover{background-color:#1d4ed8}</style><script>setTimeout(()=>{window.location.href='http://localhost:8080/login'},3e3)</script></head>
-      <body><div class="container"><div class="success-icon">✓</div><h1>Email Verified Successfully!</h1><p>Your BusLink account has been created. You can now log in.</p><p>You will be redirected to the login page automatically in 3 seconds...</p><a href="http://localhost:8080/login" class="btn">Go to Login Page Now</a></div></body>
-      </html>`;
+  const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
+  const successHtml = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head><title>Email Verified Successfully</title><style>body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background-color:#f3f4f6}.container{background:white;padding:2rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center;max-width:400px}.success-icon{color:#10b981;font-size:48px;margin-bottom:1rem}h1{color:#1f2937;margin-bottom:1rem}p{color:#6b7280;margin-bottom:2rem;line-height:1.5}.btn{background-color:#16a34a;color:white;padding:12px 24px;border:none;border-radius:6px;font-size:16px;cursor:pointer;text-decoration:none;display:inline-block;transition:background-color .3s}.btn:hover{background-color:#15803d}</style><script>setTimeout(()=>{window.location.href='${frontendUrl.replace(/\/$/, '')}/login'},3e3)</script></head>
+  <body><div class="container"><div class="success-icon">✓</div><h1>Email Verified Successfully!</h1><p>Your BusLink account has been created. You can now log in.</p><p>You will be redirected to the login page automatically in 3 seconds...</p><a href="${frontendUrl.replace(/\/$/, '')}/login" class="btn">Go to Login Page Now</a></div></body>
+  </html>`;
       // FIX: res.send implicitly returns, but making it explicit is better practice.
       res.send(successHtml);
       return;
