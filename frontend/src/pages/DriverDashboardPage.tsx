@@ -131,6 +131,25 @@ const DriverDashboardPage = () => {
   const [isTracking, setIsTracking] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const lastSentRef = useRef<number>(0);
+  const lastPositionRef = useRef<{ lat: number; lng: number; t: number } | null>(null);
+  const lastSmoothedSpeedRef = useRef<number | null>(null);
+
+  // Helper: Haversine distance in meters
+  const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371000; // meters
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // EMA smoothing
+  const ema = (prev: number | null, curr: number, alpha = 0.3) => {
+    if (prev === null || prev === undefined) return curr;
+    return alpha * curr + (1 - alpha) * prev;
+  };
 
   // Helper to send a location update to the backend
   async function sendLocationUpdate(lat: number, lng: number, speed?: number) {
@@ -158,18 +177,52 @@ const DriverDashboardPage = () => {
     // Ask for permission and start watching position
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        // If we receive a successful position, the user has allowed location access.
-        setGpsAvailable(true);
         const now = Date.now();
-        // throttle to at most once every 3s
-        if (now - lastSentRef.current < 3000) return;
-        lastSentRef.current = now;
+
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        const speed = pos.coords.speed ?? 0;
-        sendLocationUpdate(lat, lng, speed);
-        // optionally, update UI by invalidating query
-        void queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] });
+        const timestamp = pos.timestamp || now;
+
+        // Device-provided speed in m/s -> km/h when available
+        let deviceSpeedKmh: number | null = null;
+        if (typeof pos.coords.speed === 'number' && !Number.isNaN(pos.coords.speed) && pos.coords.speed > 0) {
+          deviceSpeedKmh = pos.coords.speed * 3.6;
+        }
+
+        // Compute speed from previous fix
+        let computedSpeedKmh = 0;
+        if (lastPositionRef.current) {
+          const prev = lastPositionRef.current;
+          const dt = (timestamp - prev.t) / 1000; // seconds
+          const distM = haversineMeters(prev.lat, prev.lng, lat, lng);
+          if (dt >= 1 && distM >= 3) {
+            const speedMs = distM / dt;
+            computedSpeedKmh = speedMs * 3.6;
+          } else {
+            computedSpeedKmh = 0;
+          }
+        }
+
+        // Choose device speed when available and reasonable, otherwise computed
+        const rawSpeed = (deviceSpeedKmh && deviceSpeedKmh > 0.5) ? deviceSpeedKmh : computedSpeedKmh;
+        // Clamp plausible range
+        const clamped = Math.max(0, Math.min(rawSpeed, 200));
+        // Smooth
+        const smoothed = ema(lastSmoothedSpeedRef.current, clamped, 0.35);
+        lastSmoothedSpeedRef.current = smoothed;
+
+        // Update last position for next computation
+        lastPositionRef.current = { lat, lng, t: timestamp };
+
+        // Throttle sending to server (every ~3s)
+        if (now - lastSentRef.current >= 3000) {
+          lastSentRef.current = now;
+          // send rounded smoothed speed
+          const speedToSend = Math.round(smoothed * 10) / 10;
+          void sendLocationUpdate(lat, lng, speedToSend);
+          // update UI by refetch
+          void queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] });
+        }
       },
       (err) => {
         // permission denied or other errors
@@ -197,41 +250,6 @@ const DriverDashboardPage = () => {
   useEffect(() => {
     return () => stopTracking();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // On mount, query the Permissions API (if available) to detect if geolocation
-  // was already granted or denied. Listen for changes so the manual button can
-  // hide automatically if/when the user allows location access.
-  useEffect(() => {
-    if (!navigator.permissions) {
-      // Permissions API unavailable; keep gpsAvailable as null so manual button may show as fallback
-      return;
-    }
-
-    let mounted = true;
-    (async () => {
-      try {
-        // @ts-ignore - lib.dom types include GeolocationPermissionName in newer TS versions
-        const status = await navigator.permissions.query({ name: 'geolocation' });
-        if (!mounted) return;
-        if (status.state === 'granted') setGpsAvailable(true);
-        else if (status.state === 'denied') setGpsAvailable(false);
-        else setGpsAvailable(null);
-
-        // Update gpsAvailable on permission changes
-        status.onchange = () => {
-          if (status.state === 'granted') setGpsAvailable(true);
-          else if (status.state === 'denied') setGpsAvailable(false);
-          else setGpsAvailable(null);
-        };
-      } catch (err) {
-        // Ignore and retain current gpsAvailable state
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   function refetchAssignedBus() {
