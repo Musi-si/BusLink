@@ -66,7 +66,7 @@ const DriverDashboardPage = () => {
       const tripsData = response.data.data as TripWithRelations[];
       // Map to snake_case for UI compatibility
       return tripsData.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-        .map(t => ({...t, created_at: t.startedAt, distance_km: t.distance_km, duration_mins: t.duration_mins, route: { route_name: t.route.name } }));
+        .map(t => ({...t, created_at: t.startedAt, distance_km: t.distance_km, duration_mins: t.duration_mins, route: { route_name: t.route.route_name } }));
     },
     enabled: !!user && user.role === 'driver',
   });
