@@ -1,60 +1,60 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { axiosInstance } from '@/lib/axios'
-import { Booking } from '@/types'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/hooks/use-toast'
-import { Calendar, MapPin, Users, X } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
-import { format } from 'date-fns'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { axiosInstance } from '@/lib/axios';
+import { Booking } from '@/types';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { Calendar, MapPin, Users, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 const MyBookingsPage = () => {
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: async () => {
-      const response = await axiosInstance.get<Booking[]>('/api/bookings/my')
-      return response.data
+      const response = await axiosInstance.get<Booking[]>('/api/bookings/my');
+      return response.data;
     },
-  })
+  });
 
   const cancelMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      await axiosInstance.put(`/api/bookings/${bookingId}/cancel`)
+      await axiosInstance.put(`/api/bookings/${bookingId}/cancel`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
       toast({
         title: 'Booking cancelled',
         description: 'Your booking has been cancelled successfully',
-      })
+      });
     },
     onError: () => {
       toast({
         title: 'Cancellation failed',
         description: 'Unable to cancel booking. Please try again.',
         variant: 'destructive',
-      })
+      });
     },
-  })
+  });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'default'
+        return 'default';
       case 'pending':
-        return 'secondary'
+        return 'secondary';
       case 'cancelled':
-        return 'destructive'
+        return 'destructive';
       case 'completed':
-        return 'outline'
+        return 'outline';
       default:
-        return 'secondary'
+        return 'secondary';
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -63,7 +63,7 @@ const MyBookingsPage = () => {
           <Skeleton key={i} className="h-48 w-full" />
         ))}
       </div>
-    )
+    );
   }
 
   if (bookings.length === 0) {
@@ -79,7 +79,7 @@ const MyBookingsPage = () => {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -164,7 +164,7 @@ const MyBookingsPage = () => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MyBookingsPage
+export default MyBookingsPage;
