@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mail } from "lucide-react";
 
 export default function EmailVerification() {
   return (
@@ -19,13 +19,13 @@ export default function EmailVerification() {
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-muted-foreground">
-            <span className="text-primary font-bold">The verification link will expire in 15 minutes.</span><br /> If you don&apost see the email, please check your spam folder.
+            <span className="text-primary font-bold">The verification link will expire in 15 minutes.</span><br /> If you don&apos;t see the email, please check your spam folder.
           </p>
           <p className="text-sm text-muted-foreground">
-            You can close this window. After verifying your email, you&aposll be able to log in to your account.
+            You can close this window. After verifying your email, you&apos;ll be able to log in to your account.
           </p>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
