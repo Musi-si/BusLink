@@ -1,28 +1,28 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { axiosInstance } from '@/lib/axios'
-import { useAuthStore } from '@/stores/authStore'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Users, Truck, MapPin, Bell, Plus, User } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
-import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog'
-import { AddUserDialog } from '@/components/admin/AddUserDialog'
-import { AddBusDialog } from '@/components/admin/AddBusDialog'
-import { AddRouteDialog } from '@/components/admin/AddRouteDialog'
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { axiosInstance } from '@/lib/axios';
+import { useAuthStore } from '@/stores/authStore';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Users, Truck, MapPin, Bell, Plus, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog';
+import { AddUserDialog } from '@/components/admin/AddUserDialog';
+import { AddBusDialog } from '@/components/admin/AddBusDialog';
+import { AddRouteDialog } from '@/components/admin/AddRouteDialog';
 
-type SelectedView = 'users' | 'buses' | 'routes' | null
+type SelectedView = 'users' | 'buses' | 'routes' | null;
 
 const AdminDashboardPage = () => {
-  const { user } = useAuthStore()
-  const navigate = useNavigate()
-  const [selected, setSelected] = useState<SelectedView>(null)
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
-  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false)
-  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false)
-  const [isAddBusDialogOpen, setIsAddBusDialogOpen] = useState(false)
-  const [isAddRouteDialogOpen, setIsAddRouteDialogOpen] = useState(false)
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const [selected, setSelected] = useState<SelectedView>(null);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isAddBusDialogOpen, setIsAddBusDialogOpen] = useState(false);
+  const [isAddRouteDialogOpen, setIsAddRouteDialogOpen] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
@@ -31,33 +31,33 @@ const AdminDashboardPage = () => {
         axiosInstance.get('/api/admin/users/count'),
         axiosInstance.get('/api/admin/buses/count'),
         axiosInstance.get('/api/admin/routes/count'),
-      ])
+      ]);
       return {
         users: usersRes.data.count ?? 0,
         buses: busesRes.data.count ?? 0,
         routes: routesRes.data.count ?? 0,
-      }
+      };
     },
     retry: 0,
-  })
+  });
 
   const { data: usersList } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => (await axiosInstance.get('/api/admin/users')).data,
     enabled: selected === 'users',
-  })
+  });
 
   const { data: busesList } = useQuery({
     queryKey: ['admin-buses'],
     queryFn: async () => (await axiosInstance.get('/api/admin/buses')).data,
     enabled: selected === 'buses',
-  })
+  });
 
   const { data: routesList, refetch } = useQuery({
     queryKey: ['admin-routes'],
     queryFn: async () => (await axiosInstance.get('/api/admin/routes')).data,
     enabled: selected === 'routes',
-  })
+  });
 
   return (
     <div className="container max-w-6xl mx-auto p-4">
@@ -301,7 +301,7 @@ const AdminDashboardPage = () => {
         onSuccess={() => {
           // Refetch users list
           if (selected === 'users') {
-            void refetch()
+            void refetch();
           }
         }} 
       />
@@ -312,7 +312,7 @@ const AdminDashboardPage = () => {
         onSuccess={() => {
           // Refetch buses list
           if (selected === 'buses') {
-            void refetch()
+            void refetch();
           }
         }} 
       />
@@ -323,12 +323,12 @@ const AdminDashboardPage = () => {
         onSuccess={() => {
           // Refetch routes list
           if (selected === 'routes') {
-            void refetch()
+            void refetch();
           }
         }} 
       />
     </div>
-  )
-}
+  );
+};
 
-export default AdminDashboardPage
+export default AdminDashboardPage;
