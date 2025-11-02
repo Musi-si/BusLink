@@ -8,7 +8,7 @@ const Index = () => {
         <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Index;
+export default Index

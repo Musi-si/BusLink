@@ -1,25 +1,25 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { axiosInstance } from '@/lib/axios'
-import { Bus } from '@/types'
-import { MapView } from '@/components/map/MapView'
-import { RouteList } from '@/components/routes/RouteList'
-import { BusInfoPanel } from '@/components/bus/BusInfoPanel'
-import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Menu } from 'lucide-react'
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { axiosInstance } from '@/lib/axios';
+import { Bus } from '@/types';
+import { MapView } from '@/components/map/MapView';
+import { RouteList } from '@/components/routes/RouteList';
+import { BusInfoPanel } from '@/components/bus/BusInfoPanel';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
 const HomePage = () => {
-  const [selectedBus, setSelectedBus] = useState<Bus | null>(null)
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
 
   const { data: buses = [] } = useQuery({
     queryKey: ['active-buses'],
     queryFn: async () => {
-      const response = await axiosInstance.get<Bus[]>('/api/buses/active')
-      return response.data
+      const response = await axiosInstance.get<Bus[]>('/api/buses/active');
+      return response.data;
     },
     refetchInterval: 10000, // Refresh every 10 seconds
-  })
+  });
 
   return (
     <div className="flex h-[calc(100vh-8rem)] relative">
@@ -65,7 +65,7 @@ const HomePage = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default HomePage
+export default HomePage;
