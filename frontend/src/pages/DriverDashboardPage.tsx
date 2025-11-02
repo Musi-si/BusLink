@@ -1,44 +1,44 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { axiosInstance } from '@/lib/axios'
-import { useAuthStore } from '@/stores/authStore'
-import { BusWithRelations, TripWithRelations, BookingWithRelations } from '@/types'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Bus as BusIcon, MapPin, Activity, Users, Clock } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { UpdateBusLocationDialog } from '@/components/driver/UpdateBusLocationDialog'
-import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
-import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { axiosInstance } from '@/lib/axios';
+import { useAuthStore } from '@/stores/authStore';
+import { BusWithRelations, TripWithRelations, BookingWithRelations } from '@/types';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Bus as BusIcon, MapPin, Activity, Users, Clock } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { UpdateBusLocationDialog } from '@/components/driver/UpdateBusLocationDialog';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const DriverDashboardPage = () => {
   // --- FIX: ALL HOOKS ARE NOW AT THE TOP LEVEL ---
 
-  const queryClient = useQueryClient()
-  const { user } = useAuthStore()
-  const { toast } = useToast()
-  const manualEnabled = (import.meta.env.VITE_ENABLE_MANUAL_LOCATION === 'true')
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const { toast } = useToast();
+  const manualEnabled = (import.meta.env.VITE_ENABLE_MANUAL_LOCATION === 'true');
 
   // UI State
-  const [selected, setSelected] = useState<'trips' | 'bookings' | 'bus' | null>(null)
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
-  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false)
+  const [selected, setSelected] = useState<'trips' | 'bookings' | 'bus' | null>(null);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
   
   // GPS State
-  const [gpsAvailable, setGpsAvailable] = useState<boolean | null>(null)
-  const [isTracking, setIsTracking] = useState(false)
-  const watchIdRef = useRef<number | null>(null)
-  const lastSentRef = useRef<number>(0)
+  const [gpsAvailable, setGpsAvailable] = useState<boolean | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+  const lastSentRef = useRef<number>(0);
 
   // Data Fetching Hooks
   const { data: assignedBus, isLoading: busLoading, error: busError } = useQuery({
     queryKey: ['my-assigned-bus'],
     queryFn: async () => {
-      const response = await axiosInstance.get('/api/driver/my-bus')
-      const b = response.data.data as any
+      const response = await axiosInstance.get('/api/driver/my-bus');
+      const b = response.data.data as any;
       // Map backend camelCase names to the snake_case used in the original UI code
       const mapped = {
         id: b.id,
@@ -53,33 +53,33 @@ const DriverDashboardPage = () => {
         route: b.route,
         driver: b.driver,
         _raw: b,
-      } as unknown as BusWithRelations & { bus_number: string, current_lat: number, current_lng: number, speed_kmh: number, driver: { licenseNumber?: string } }
-      return mapped
+      } as unknown as BusWithRelations & { bus_number: string, current_lat: number, current_lng: number, speed_kmh: number, driver: { licenseNumber?: string } };
+      return mapped;
     },
     enabled: !!user && user.role === 'driver',
-  })
+  });
 
   const { data: trips, isLoading: tripsLoading } = useQuery({
     queryKey: ['my-driver-trips'],
     queryFn: async () => {
-      const response = await axiosInstance.get('/api/driver/trips')
-      const tripsData = response.data.data as TripWithRelations[]
+      const response = await axiosInstance.get('/api/driver/trips');
+      const tripsData = response.data.data as TripWithRelations[];
       // Map to snake_case for UI compatibility
       return tripsData.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-        .map(t => ({...t, created_at: t.startedAt, distance_km: t.distance_km, duration_mins: t.duration_mins, route: { route_name: t.route.route_name } }))
+        .map(t => ({...t, created_at: t.startedAt, distance_km: t.distance_km, duration_mins: t.duration_mins, route: { route_name: t.route.route_name } }));
     },
     enabled: !!user && user.role === 'driver',
-  })
+  });
 
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['my-bus-bookings'],
     queryFn: async () => {
-      const response = await axiosInstance.get('/api/driver/my-bus/bookings')
+      const response = await axiosInstance.get('/api/driver/my-bus/bookings');
       // Map to snake_case for UI compatibility
-      return (response.data.data as BookingWithRelations[]).map(b => ({ ...b, created_at: b.created_at, seats: b.seats }))
+      return (response.data.data as BookingWithRelations[]).map(b => ({ ...b, created_at: b.created_at, seats: b.seats }));
     },
     enabled: !!user && user.role === 'driver',
-  })
+  });
 
   // GPS and Helper Function Hooks (now unconditional)
   const sendLocationUpdate = useCallback(async (lat: number, lng: number, speed?: number) => {
@@ -88,60 +88,60 @@ const DriverDashboardPage = () => {
       latitude: lat,
       longitude: lng,
       speedKmh: speed ?? 0,
-    })
-  }, [])
+    });
+  }, []);
 
   const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
+      navigator.geolocation.clearWatch(watchIdRef.current);
     }
-    watchIdRef.current = null
-    setIsTracking(false)
-  }, [])
+    watchIdRef.current = null;
+    setIsTracking(false);
+  }, []);
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) {
-      toast({ title: 'Geolocation unavailable', description: 'Geolocation is not supported by your browser.', variant: 'destructive' })
-      setGpsAvailable(false)
-      return
+      toast({ title: 'Geolocation unavailable', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+      setGpsAvailable(false);
+      return;
     }
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        setGpsAvailable(true)
-        const now = Date.now()
-        if (now - lastSentRef.current < 5000) return // Send every 5 seconds
-        lastSentRef.current = now
-        sendLocationUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.speed ?? 0)
-        void queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] })
+        setGpsAvailable(true);
+        const now = Date.now();
+        if (now - lastSentRef.current < 5000) return; // Send every 5 seconds
+        lastSentRef.current = now;
+        sendLocationUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.speed ?? 0);
+        void queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] });
       },
       (err) => {
-        console.error('Geolocation error', err)
-        setGpsAvailable(false)
-        toast({ title: 'Unable to access location', description: 'Please enable location services.', variant: 'destructive' })
-        stopTracking()
+        console.error('Geolocation error', err);
+        setGpsAvailable(false);
+        toast({ title: 'Unable to access location', description: 'Please enable location services.', variant: 'destructive' });
+        stopTracking();
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
-    watchIdRef.current = id
-    setIsTracking(true)
-  }, [queryClient, sendLocationUpdate, stopTracking, toast])
+    );
+    watchIdRef.current = id;
+    setIsTracking(true);
+  }, [queryClient, sendLocationUpdate, stopTracking, toast]);
 
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     if (navigator.permissions) {
       navigator.permissions.query({ name: 'geolocation' }).then((status) => {
-        setGpsAvailable(status.state === 'granted')
-        status.onchange = () => setGpsAvailable(status.state === 'granted')
-      })
+        setGpsAvailable(status.state === 'granted');
+        status.onchange = () => setGpsAvailable(status.state === 'granted');
+      });
     }
-  }, [])
+  }, []);
 
   // --- CONDITIONAL RENDERING LOGIC (now safely after all hooks) ---
 
@@ -151,7 +151,7 @@ const DriverDashboardPage = () => {
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
-    )
+    );
   }
 
   if (busError) {
@@ -163,7 +163,7 @@ const DriverDashboardPage = () => {
           <p className="text-muted-foreground">{busError.message}</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!assignedBus) {
@@ -175,18 +175,18 @@ const DriverDashboardPage = () => {
           <p className="text-muted-foreground">You don't have a bus assigned yet. Contact your supervisor.</p>
         </div>
       </div>
-    )
+    );
   }
 
   // --- UI-SPECIFIC HELPERS AND CONSTANTS (now safe to define) ---
   
-  const getStatusColor = (state: string) => { /* ... unchanged ... */ }
-  const tripCount = Array.isArray(trips) ? trips.length : 0
-  const bookingCount = Array.isArray(bookings) ? bookings.length : 0
+  const getStatusColor = (state: string) => { /* ... unchanged ... */ };
+  const tripCount = Array.isArray(trips) ? trips.length : 0;
+  const bookingCount = Array.isArray(bookings) ? bookings.length : 0;
   
   const refetchAssignedBus = () => {
-    return queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] })
-  }
+    return queryClient.invalidateQueries({ queryKey: ['my-assigned-bus'] });
+  };
 
   return (
     <div className="container max-w-6xl mx-auto p-4">
@@ -324,7 +324,7 @@ const DriverDashboardPage = () => {
       <ChangePasswordDialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen} />
       <UpdatePhoneDialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen} />
     </div>
-  )
-}
+  );
+};
 
-export default DriverDashboardPage
+export default DriverDashboardPage;
