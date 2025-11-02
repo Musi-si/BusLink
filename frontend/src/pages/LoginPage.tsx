@@ -1,103 +1,103 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { axiosInstance } from '@/lib/axios';
-import { useAuthStore } from '@/stores/authStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Bus, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { axiosInstance } from '@/lib/axios'
+import { useAuthStore } from '@/stores/authStore'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
+import { Bus, Loader2 } from 'lucide-react'
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
-  const { toast } = useToast();
-  const location = useLocation();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { setAuth } = useAuthStore()
+  const { toast } = useToast()
+  const location = useLocation()
 
   // If the user arrived with a verification token (from the email link), call
   // the backend verify endpoint and show a success toast. Then remove the
   // query param so the action isn't repeated on refresh.
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const verifyToken = params.get('verifyToken') || params.get('token');
-    if (!verifyToken) return;
+    const params = new URLSearchParams(location.search)
+    const verifyToken = params.get('verifyToken') || params.get('token')
+    if (!verifyToken) return
 
     (async () => {
       try {
         // Using responseType 'text' because the endpoint returns HTML on success.
-        const resp = await axiosInstance.get('/api/auth/verify', { params: { token: verifyToken }, responseType: 'text' });
+        const resp = await axiosInstance.get('/api/auth/verify', { params: { token: verifyToken }, responseType: 'text' })
         if (resp.status === 200) {
-          toast({ title: 'Email verified', description: 'Your email was verified successfully. You can now log in.' });
+          toast({ title: 'Email verified', description: 'Your email was verified successfully. You can now log in.' })
         } else {
-          toast({ title: 'Verification', description: 'Email verification completed.', variant: 'destructive' });
+          toast({ title: 'Verification', description: 'Email verification completed.', variant: 'destructive' })
         }
       } catch (err: any) {
-        // Backend returns HTML on error too; show a generic message.
-        toast({ title: 'Verification failed', description: err?.response?.data || 'Verification link is invalid or expired', variant: 'destructive' });
+        // Backend returns HTML on error too show a generic message.
+        toast({ title: 'Verification failed', description: err?.response?.data || 'Verification link is invalid or expired', variant: 'destructive' })
       } finally {
         // Remove query param to avoid repeated verification attempts on refresh
-        navigate('/login', { replace: true });
+        navigate('/login', { replace: true })
       }
-    })();
-  }, [location.search, navigate, toast]);
+    })()
+  }, [location.search, navigate, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+    e.preventDefault()
+    setIsLoading(true)
 
     try {
-      console.log('Attempting login...');
+      console.log('Attempting login...')
       const response = await axiosInstance.post('/api/auth/login', {
         email,
         password,
-      });
+      })
 
-      console.log('Login response:', response.data);
-      const { token, user } = response.data;
+      console.log('Login response:', response.data)
+      const { token, user } = response.data
       
-      console.log('User role:', user.role);
-      console.log('Setting auth state...');
-      setAuth(user, token);
+      console.log('User role:', user.role)
+      console.log('Setting auth state...')
+      setAuth(user, token)
 
       // Show success message immediately
       toast({
         title: 'Welcome back!',
         description: `Logged in as ${user.name} (${user.role})`,
-      });
+      })
 
-      console.log('Redirecting to dashboard...');
+      console.log('Redirecting to dashboard...')
       // Redirect based on role
       switch (user.role) {
         case 'driver':
-          console.log('-> Driver dashboard');
-          navigate('/driver/dashboard', { replace: true });
-          break;
+          console.log('-> Driver dashboard')
+          navigate('/driver/dashboard', { replace: true })
+          break
         case 'admin':
-          console.log('-> Admin dashboard');
-          navigate('/dashboard/admin', { replace: true });
-          break;
+          console.log('-> Admin dashboard')
+          navigate('/dashboard/admin', { replace: true })
+          break
         case 'passenger':
-          console.log('-> Passenger dashboard');
-          navigate('/dashboard/passenger', { replace: true });
-          break;
+          console.log('-> Passenger dashboard')
+          navigate('/dashboard/passenger', { replace: true })
+          break
         default:
-          console.error('Unknown role:', user.role);
-          navigate('/', { replace: true });
+          console.error('Unknown role:', user.role)
+          navigate('/', { replace: true })
       }
     } catch (error: any) {
       toast({
         title: 'Login failed',
         description: error.response?.data?.message || 'Invalid credentials',
         variant: 'destructive',
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
   <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4 relative auth-bg" style={{ backgroundImage: `url('/images/bus-greenery.avif')` }}>
@@ -154,7 +154,7 @@ const LoginPage = () => {
         </form>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage

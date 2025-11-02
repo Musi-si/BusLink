@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import ThemeToggle from '@/components/ui/theme-toggle'
-import { Card, CardContent } from '@/components/ui/card'
-import { Bus, MapPin, Clock, Shield, Users, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import ThemeToggle from '@/components/ui/theme-toggle';
+import { Card, CardContent } from '@/components/ui/card';
+import { Bus, MapPin, Clock, Shield, Users, TrendingUp } from 'lucide-react';
 
 const LandingPage = () => {
   return (
@@ -235,7 +235,7 @@ const LandingPage = () => {
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default LandingPage
+export default LandingPage;
