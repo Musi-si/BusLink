@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import crypto from "crypto";
 import { addSeconds, isBefore } from "date-fns";
-import AppError from "@/utils/AppError";
+import AppError from "@/utils/AppError.js";
 
 const config = {
   PAYPACK_CLIENT_ID: process.env.PAYPACK_CLIENT_ID || "",

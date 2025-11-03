@@ -1,250 +1,203 @@
+// src/controllers/paymentController.ts
+
 import { Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
 import prisma from "@/config/prisma.js";
-import AppError from "@/utils/AppError.js";
-import { AuthRequest } from "@/types.js";
+import { AppError } from "@/middleware/errorHandler.js";
+import { AuthRequest } from "@/types/index.js";
 import { paypackService } from "@/services/paypack.js";
-import { socketManager } from "@/services/socket.js";
 import { notificationService } from "@/services/notification.js";
 
 export class PaymentController {
+  /**
+   * (Manual) Allows an Admin to record a payment made via Cash, etc.
+   */
   async recordPayment(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { appointmentId, amount, method } = req.body;
+      const { bookingId, amount, method } = req.body;
 
-      const appointment = await prisma.booking.findUnique({
-        where: { id: appointmentId },
-        select: { passengerId: true },
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
       });
 
-      if (!appointment) {
-        return next(new AppError("Appointment not found", 404));
+      if (!booking) {
+        return next(new AppError("Booking not found", 404));
       }
 
-      const payment = await prisma.payment.create({
-        data: {
-          appointmentId,
-          patientId: appointment.patientId,
-          amount,
-          method,
-          status: "PAID",
-        },
-      });
-      res.status(201).json({ status: "success", data: payment });
+      // Use a transaction to update both payment and booking
+      const [payment, updatedBooking] = await prisma.$transaction([
+        prisma.payment.create({
+          data: {
+            bookingId,
+            amount,
+            method,
+            status: "paid",
+          },
+        }),
+        prisma.booking.update({
+          where: { id: bookingId },
+          data: {
+            paymentStatus: "paid",
+            status: "confirmed",
+          },
+        }),
+      ]);
+
+      res.status(201).json({ status: "success", data: { payment, booking: updatedBooking } });
     } catch (error) {
       next(error);
     }
   }
 
+  /**
+   * Initiates an automated mobile money payment for a booking.
+   */
   async initiatePayment(req: AuthRequest, res: Response, next: NextFunction) {
-    const { appointmentId, phoneNumber } = req.body;
-    const patientUserId = req.user!.id;
+    const { bookingId, phoneNumber } = req.body;
+    const passengerUserId = req.user!.id;
 
     try {
-      const patient = await prisma.patient.findUnique({
-        where: { userId: patientUserId },
-      });
-      if (!patient) {
-        return next(new AppError("Patient profile not found.", 404));
-      }
-
-      const appointment = await prisma.appointment.findFirst({
-        where: { id: appointmentId, patientId: patient.id },
-        include: { doctor: true, payment: true },
+      const booking = await prisma.booking.findFirst({
+        where: { id: bookingId, userId: passengerUserId },
+        include: { payment: true },
       });
 
-      if (!appointment) {
-        return next(
-          new AppError(
-            "Appointment not found or you are not authorized to pay for it.",
-            404
-          )
-        );
+      if (!booking) {
+        return next(new AppError("Booking not found or you are not authorized to pay for it.", 404));
       }
-      if (appointment.payment?.status === "PAID") {
-        return next(
-          new AppError("This appointment has already been paid for.", 409)
-        );
+      if (booking.payment?.status === "paid") {
+        return next(new AppError("This booking has already been paid for.", 409));
+      }
+      if (booking.status === 'cancelled') {
+        return next(new AppError("Cannot pay for a cancelled booking.", 400));
       }
 
-      const amount = appointment.doctor.consultationFee;
+      const amount = booking.totalFare;
 
-      // Use a transaction to ensure atomicity
       const payment = await prisma.$transaction(async (tx) => {
-        // If a failed payment exists, delete it to create a new one.
-        if (appointment.payment) {
-          await tx.payment.delete({ where: { id: appointment.payment.id } });
+        if (booking.payment) {
+          await tx.payment.delete({ where: { id: booking.payment.id } });
         }
-
-        // 1. Create a PENDING payment record in our database
         const newPayment = await tx.payment.create({
           data: {
-            patientId: patient.id,
-            appointmentId: appointment.id,
+            bookingId: booking.id,
             amount,
             method: "MOBILE_MONEY_AUTOMATED",
-            status: "PENDING",
+            status: "pending",
           },
         });
-
-        // 2. Initiate the payment with Paypack
         const paypackResponse = await paypackService.cashin({
           number: phoneNumber,
           amount: amount.toNumber(),
         });
-
-        // 3. Update our record with Paypack's reference
-        const updatedPayment = await tx.payment.update({
+        return tx.payment.update({
           where: { id: newPayment.id },
           data: { transactionRef: paypackResponse.ref },
         });
-        return updatedPayment;
       });
 
       res.status(200).json({
         status: "success",
-        message: "Payment initiated. Please confirm on your phone.",
+        message: "Payment initiated. Please confirm the transaction on your phone.",
         data: { paymentId: payment.id },
       });
     } catch (error) {
       next(error);
     }
   }
+
+  /**
+   * Handles incoming webhooks from the Paypack service.
+   */
   async handlePaypackWebhook(req: Request, res: Response, next: NextFunction) {
     const signature = req.get("x-paypack-signature");
-    // The 'rawBody' is attached by our custom middleware in src/index.ts
     const rawBody = (req as any).rawBody;
 
     try {
-      // 1. SECURITY: Always verify the signature first
       paypackService.verifyWebhookSignature(signature, rawBody);
 
       const { data } = req.body;
       if (!data || !data.ref || !data.status) {
         return next(new AppError("Invalid webhook payload.", 400));
       }
-      console.log(`[INFO] Received valid Paypack webhook for ref: ${data.ref}`);
 
-      // 2. Find the payment by the unique transaction reference
       const payment = await prisma.payment.findUnique({
         where: { transactionRef: data.ref },
         include: {
-          patient: {
-            select: { userId: true, user: { select: { fullName: true } } },
-          },
-          appointment: {
-            select: {
-              doctor: {
-                select: { userId: true, user: { select: { fullName: true } } },
-              },
-            },
+          booking: {
+            include: { user: true, bus: { include: { driver: true } } },
           },
         },
       });
       if (!payment) {
-        console.warn(`[WARN] Payment with ref ${data.ref} not found.`);
-        // Respond 200 OK so Paypack doesn't retry for a transaction we don't know about.
-        return res
-          .status(200)
-          .send("Webhook received, but transaction not found.");
+        return res.status(200).send("Webhook received, but transaction not found.");
       }
-
-      // 3. Idempotency: Only process if the payment is still pending
-      if (payment.status !== "PENDING") {
-        console.log(
-          `[INFO] Webhook for ref ${data.ref} already processed. Current status: ${payment.status}.`
-        );
+      if (payment.status !== "pending") {
         return res.status(200).send("Webhook already processed.");
       }
 
-      // 4. Update payment status based on webhook data
-      const newStatus = data.status === "successful" ? "PAID" : "FAILED";
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: newStatus },
+      const newStatus = data.status === "successful" ? "paid" : "failed";
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: newStatus },
+        });
+        if (newStatus === "paid") {
+          await tx.booking.update({
+            where: { id: payment.bookingId },
+            data: { paymentStatus: "paid", status: "confirmed" },
+          });
+        }
       });
-      console.log(`[INFO] Payment ${payment.id} updated to ${newStatus}`);
-
-      // 5. Notify the frontend client via WebSocket
-      socketManager.notifyPaymentUpdate(payment.id, newStatus);
-
-      // 6. Create notifications for patient and doctor on successful payment
-      if (newStatus === "PAID") {
-        const patientName = payment.patient.user.fullName;
-        const doctorName =
-          payment.appointment.doctor?.user.fullName || "the doctor";
+      
+      if (newStatus === "paid") {
+        const passenger = payment.booking.user;
+        const driver = payment.booking.bus.driver;
 
         await notificationService.createNotification(
-          payment.patient.userId,
-          `Your payment of RWF ${payment.amount} for the appointment with ${doctorName} has been confirmed.`,
-          "INFO"
+          passenger.id,
+          `Your payment of RWF ${payment.amount} for booking #${payment.booking.bookingReference} is confirmed.`,
+          'SUCCESS'
         );
-        if (payment.appointment.doctor) {
+        if (driver) {
           await notificationService.createNotification(
-            payment.appointment.doctor.userId,
-            `Payment of RWF ${payment.amount} has been received from ${patientName} for your upcoming appointment.`,
-            "INFO"
+            driver.userId,
+            `A new booking (#${payment.booking.bookingReference}) has been paid for on your bus.`,
           );
         }
       }
 
-      // 7. Acknowledge the webhook
       res.status(200).send("Webhook processed successfully.");
     } catch (error) {
       next(error);
     }
   }
 
-  async viewPaymentHistory(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  /**
+   * View payment history for the authenticated user.
+   */
+  async viewPaymentHistory(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const where: Prisma.PaymentWhereInput = {};
       const user = req.user!;
 
-      if (user.role === "PATIENT") {
-        const patient = await prisma.patient.findUnique({
-          where: { userId: user.id },
-        });
-        if (!patient)
-          return res.status(200).json({ status: "success", data: [] });
-        where.patientId = patient.id;
-      } else if (
-        user.role === "RECEPTIONIST" ||
-        user.role === "HOSPITAL_ADMIN"
-      ) {
-        // Allow Hospital Admins to see payments for their hospital as well
-        const staff = await prisma.user.findUnique({
-          where: { id: user.id },
-          include: {
-            receptionistProfile: true,
-            doctorProfile: {
-              include: { hospital: { select: { adminId: true } } },
-            },
-          },
-        });
-        const hospitalId =
-          staff?.receptionistProfile?.hospitalId ||
-          staff?.doctorProfile?.hospitalId;
-        if (!hospitalId)
-          return res.status(200).json({ status: "success", data: [] });
-        where.appointment = { hospitalId: hospitalId };
+      if (user.role === "passenger") {
+        where.booking = { userId: user.id };
+      } else if (user.role !== "admin") {
+        return res.status(200).json({ status: "success", data: [] });
       }
 
       const payments = await prisma.payment.findMany({
         where,
         include: {
-          appointment: { select: { id: true, appointmentDate: true } },
-          patient: { select: { user: { select: { fullName: true } } } },
+          booking: {
+            select: { bookingReference: true, travelDate: true },
+          },
         },
         orderBy: { createdAt: "desc" },
       });
 
-      res
-        .status(200)
-        .json({ status: "success", results: payments.length, data: payments });
+      res.status(200).json({ status: "success", results: payments.length, data: payments });
     } catch (error) {
       next(error);
     }

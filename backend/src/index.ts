@@ -29,6 +29,7 @@ import routeRoutes from '@/api/route/routes.js';
 import stopRoutes from '@/api/stop/routes.js';
 import bookingRoutes from '@/api/booking/routes.js';
 import driverRoutes from '@/api/driver/routes.js';
+import paymentRoutes from '@/api/payments/routes.js';
 import simulatorRoutes from '@/api/simulator/routes.js'; // Dev-only routes
 
 // --- Initialization ---
@@ -51,7 +52,11 @@ gpsSimulator.initialize(io);
 // --- Core Middleware ---
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:8080', credentials: true }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any , res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // --- API Rate Limiting ---
@@ -83,6 +88,7 @@ app.use('/api/routes', routeRoutes);
 app.use('/api/stops', stopRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/driver', driverRoutes);
+app
 app.use('/api/simulator', simulatorRoutes); // These routes are self-protecting in production
 
 // --- Health Check Endpoint ---

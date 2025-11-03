@@ -1,17 +1,13 @@
 // This is your Prisma schema file.
 
-// 1. Define the database connection
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// 2. Define the Prisma Client generator
 generator client {
   provider = "prisma-client-js"
 }
-
-// 3. Define your data models & enums
 
 // --- Enums for Type Safety ---
 
@@ -72,24 +68,23 @@ enum PaymentMethod {
 // --- Core Models ---
 
 model User {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   name            String
-  email           String   @unique
+  email           String    @unique
   password        String
-  role            Role     @default(passenger)
+  role            Role      @default(passenger)
   phone           String?
-  isEmailVerified Boolean  @default(false) @map("is_email_verified")
-  isActive        Boolean  @default(true) @map("is_active")
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  isActive        Boolean   @default(true) @map("is_active")
   otp             String?
-  otpExpiresAt    DateTime?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  otpExpiresAt    DateTime? @map("otp_expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // --- Relationships ---
   driverProfile Driver?
   bookings      Booking[]
-
-  payment            Payment?
+  notifications Notification[]
 
   @@map("users")
 }
@@ -105,13 +100,11 @@ model Driver {
   isVerified    Boolean      @default(false) @map("is_verified")
 
   // --- Relationships ---
-  // One-to-one with User
   user   User @relation(fields: [userId], references: [id])
   userId Int  @unique @map("user_id")
 
-  // A Driver is assigned to one Bus at a time
   bus  Bus?
-  Trip Trip[]
+  trips Trip[]
 
   @@map("drivers")
 }
@@ -120,7 +113,7 @@ model Route {
   id                       Int      @id @default(autoincrement())
   name                     String
   description              String?
-  polyline                 String? // Encoded polyline string for map drawing
+  polyline                 String?
   color                    String?  @default("#007bff")
   distanceKm               Decimal? @map("distance_km")
   estimatedDurationMinutes Int?     @map("estimated_duration_minutes")
@@ -131,7 +124,7 @@ model Route {
   stops    Stop[]
   buses    Bus[]
   bookings Booking[]
-  Trip     Trip[]
+  trips    Trip[]
 
   @@map("routes")
 }
@@ -152,11 +145,9 @@ model Stop {
   route   Route @relation(fields: [routeId], references: [id])
   routeId Int   @map("route_id")
 
-  // Buses currently at or heading to this stop
   busesAtStop       Bus[] @relation("CurrentStop")
   busesComingToStop Bus[] @relation("NextStop")
 
-  // Bookings originating from or destined for this stop
   departureBookings Booking[] @relation("FromStop")
   arrivalBookings   Booking[] @relation("ToStop")
 
@@ -184,7 +175,6 @@ model Bus {
   route   Route @relation(fields: [routeId], references: [id])
   routeId Int   @map("route_id")
 
-  // One-to-one with Driver
   driver   Driver? @relation(fields: [driverId], references: [id])
   driverId Int?    @unique @map("driver_id")
 
@@ -196,7 +186,7 @@ model Bus {
 
   locationUpdates LocationUpdate[]
   bookings        Booking[]
-  Trip            Trip[]
+  trips           Trip[]
 
   @@map("buses")
 }
@@ -213,7 +203,6 @@ model LocationUpdate {
   source    LocationSource @default(gps)
   isValid   Boolean        @default(true) @map("is_valid")
 
-  // --- Relationships ---
   bus   Bus @relation(fields: [busId], references: [id])
   busId Int @map("bus_id")
 
@@ -222,13 +211,12 @@ model LocationUpdate {
 }
 
 model Booking {
-  id                 String        @id @default(cuid()) // CUID is better for non-sequential IDs
+  id                 String        @id @default(cuid())
   seatCount          Int           @default(1) @map("seat_count")
   totalFare          Decimal       @map("total_fare")
-  bookingReference   String        @unique @map("booking_reference") // Generate this in your application code
+  bookingReference   String        @unique @map("booking_reference")
   status             BookingStatus @default(pending)
   paymentStatus      PaymentStatus @default(pending) @map("payment_status")
-  paymentMethod      String?       @map("payment_method")
   bookingTime        DateTime      @default(now()) @map("booking_time")
   travelDate         DateTime      @map("travel_date")
   passengerName      String?       @map("passenger_name")
@@ -254,7 +242,8 @@ model Booking {
   toStop   Stop @relation("ToStop", fields: [toStopId], references: [id])
   toStopId Int  @map("to_stop_id")
 
-  payment            Payment?
+  // A Booking has one Payment
+  payment Payment?
 
   @@index([travelDate])
   @@map("bookings")
@@ -264,7 +253,7 @@ model Trip {
   id           String    @id @default(cuid())
   distanceKm   Float     @map("distance_km")
   durationMins Int       @map("duration_mins")
-  status       String // e.g., 'in-progress', 'completed', 'cancelled'
+  status       String
   startedAt    DateTime  @default(now()) @map("started_at")
   endedAt      DateTime? @map("ended_at")
 
@@ -283,20 +272,32 @@ model Trip {
 }
 
 model Payment {
-  id        String        @id @default(uuid())
-  amount    Decimal
-  method    PaymentMethod
-  status    PaymentStatus @default(PENDING)
-  createdAt DateTime      @default(now())
+  id             String        @id @default(cuid())
+  amount         Decimal
+  method         PaymentMethod
+  status         PaymentStatus @default(pending)
+  transactionRef String?       @unique @map("transaction_ref")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  // Foreign Keys
-  bookingId  String  @unique
-  passengerId      String
-  transactionRef String? @unique 
-
-  // Relationships
-  booking     Booking       @relation(fields: [bookingId], references: [id])
-  passenger   User     @relation(fields: [userId], references: [id])
+  // --- Relationship ---
+  // A Payment belongs to one Booking
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  bookingId String  @unique @map("booking_id")
 
   @@map("payments")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  type      String   @default("INFO") // e.g., INFO, WARNING, SUCCESS
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // --- Relationship ---
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @map("user_id")
+
+  @@map("notifications")
 }
