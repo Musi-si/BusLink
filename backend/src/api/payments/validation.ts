@@ -3,7 +3,7 @@ import { PaymentMethod } from "@prisma/client";
 
 export const recordPaymentSchema = z.object({
   body: z.object({
-    appointmentId: z.string().uuid(),
+    bookingId: z.string().uuid(),
     amount: z.number().positive("Amount must be a positive number"),
     method: z.nativeEnum(PaymentMethod),
   }),
@@ -11,7 +11,7 @@ export const recordPaymentSchema = z.object({
 
 export const initiatePaymentSchema = z.object({
   body: z.object({
-    appointmentId: z.string().uuid("A valid appointment ID is required."),
+    bookingId: z.string().uuid("A valid booking ID is required."),
     phoneNumber: z
       .string()
       .regex(

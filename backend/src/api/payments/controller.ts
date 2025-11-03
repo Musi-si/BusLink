@@ -1,20 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
-import prisma from "@/config/prisma";
-import AppError from "@/utils/AppError";
-import { AuthRequest } from "@/types";
-import { paypackService } from "@/services/paypack";
-import { socketService } from "@/config/socket";
-import { notificationService } from "@/services/notification";
+import prisma from "@/config/prisma.js";
+import AppError from "@/utils/AppError.js";
+import { AuthRequest } from "@/types.js";
+import { paypackService } from "@/services/paypack.js";
+import { socketManager } from "@/services/socket.js";
+import { notificationService } from "@/services/notification.js";
 
 export class PaymentController {
   async recordPayment(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { appointmentId, amount, method } = req.body;
 
-      const appointment = await prisma.appointment.findUnique({
+      const appointment = await prisma.booking.findUnique({
         where: { id: appointmentId },
-        select: { patientId: true },
+        select: { passengerId: true },
       });
 
       if (!appointment) {
@@ -166,7 +166,7 @@ export class PaymentController {
       console.log(`[INFO] Payment ${payment.id} updated to ${newStatus}`);
 
       // 5. Notify the frontend client via WebSocket
-      socketService.notifyPaymentUpdate(payment.id, newStatus);
+      socketManager.notifyPaymentUpdate(payment.id, newStatus);
 
       // 6. Create notifications for patient and doctor on successful payment
       if (newStatus === "PAID") {

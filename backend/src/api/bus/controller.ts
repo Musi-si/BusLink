@@ -6,7 +6,7 @@ import prisma from '@/config/prisma.js';
 import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
 // FIX: Add calculateRouteETAs and BusLocation to the import
 import { calculateRealTimeETA, calculateRouteETAs, Location } from '@/utils/etaCalculator.js';import { busStateManager } from '@/services/busStateManager.js';
-import { socketManager } from '@/services/socketService.js';
+import { socketManager } from '@/services/socket.js';
 import { AuthRequest } from '@/types/index.js';
 
 class BusController {

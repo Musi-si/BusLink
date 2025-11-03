@@ -62,6 +62,13 @@ enum LocationSource {
   simulator
 }
 
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  INSURANCE
+  MOBILE_MONEY_AUTOMATED
+}
+
 // --- Core Models ---
 
 model User {
@@ -81,6 +88,8 @@ model User {
   // --- Relationships ---
   driverProfile Driver?
   bookings      Booking[]
+
+  payment            Payment?
 
   @@map("users")
 }
@@ -245,6 +254,8 @@ model Booking {
   toStop   Stop @relation("ToStop", fields: [toStopId], references: [id])
   toStopId Int  @map("to_stop_id")
 
+  payment            Payment?
+
   @@index([travelDate])
   @@map("bookings")
 }
@@ -269,4 +280,23 @@ model Trip {
 
   @@index([driverId])
   @@map("trips")
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  amount    Decimal
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  // Foreign Keys
+  bookingId  String  @unique
+  passengerId      String
+  transactionRef String? @unique 
+
+  // Relationships
+  booking     Booking       @relation(fields: [bookingId], references: [id])
+  passenger   User     @relation(fields: [userId], references: [id])
+
+  @@map("payments")
 }

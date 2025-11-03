@@ -17,7 +17,7 @@ import { errorHandler, notFoundHandler } from '@/middleware/errorHandler.js';
 
 // --- Service Imports ---
 // Import the singleton instances of our services with correct paths
-import { socketManager } from '@/services/socketService.js';
+import { socketManager } from '@/services/socket.js';
 import { busStateManager } from '@/services/busStateManager.js';
 import { gpsSimulator } from '@/services/gpsSimulator.js';
 
