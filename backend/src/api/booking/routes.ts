@@ -1,7 +1,7 @@
 // src/routes/bookingRoutes.ts
 
 import { Router } from 'express';
-import { bookingController } from '@/controllers/bookingController.js';
+import { bookingController } from '@/api/booking/controller.js';
 import { authenticateToken, authorize } from '@/middleware/auth.js';
 
 const router = Router();

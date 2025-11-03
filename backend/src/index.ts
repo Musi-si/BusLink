@@ -23,13 +23,13 @@ import { gpsSimulator } from '@/services/gpsSimulator.js';
 
 // --- Route Imports ---
 // Import all the route handlers we have created
-import authRoutes from '@/routes/auth.js';
-import busRoutes from '@/routes/bus.js';
-import routeRoutes from '@/routes/routes.js';
-import stopRoutes from '@/routes/stops.js';
-import bookingRoutes from '@/routes/bookings.js';
-import driverRoutes from '@/routes/driverRoutes.js';
-import simulatorRoutes from '@/routes/simulator.js'; // Dev-only routes
+import authRoutes from '@/api/auth/routes.js';
+import busRoutes from '@/api/bus/routes.js';
+import routeRoutes from '@/api/route/routes.js';
+import stopRoutes from '@/api/stop/routes.js';
+import bookingRoutes from '@/api/booking/routes.js';
+import driverRoutes from '@/api/driver/routes.js';
+import simulatorRoutes from '@/api/simulator/routes.js'; // Dev-only routes
 
 // --- Initialization ---
 const app: Express = express();

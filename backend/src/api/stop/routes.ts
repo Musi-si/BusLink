@@ -1,7 +1,7 @@
 // src/routes/stopRoutes.ts
 
 import { Router } from 'express';
-import { stopController } from '@/controllers/stopController.js';
+import { stopController } from '@/api/stop/controller.js';
 
 const router = Router();
 

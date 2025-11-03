@@ -1,7 +1,7 @@
 // src/routes/routeRoutes.ts
 
 import { Router } from 'express';
-import { routeController } from '@/controllers/routeController.js';
+import { routeController } from '@/api/route/controller.js';
 
 const router = Router();
 

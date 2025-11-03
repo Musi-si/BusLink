@@ -1,7 +1,7 @@
 // routes/authRoutes.ts
 
 import express, { Router } from 'express'
-import { AuthController } from '@/controllers/authController.js'
+import { AuthController } from '@/api/auth/controller.js'
 import { authenticateToken } from '@/middleware/auth.js'
 import rateLimit from 'express-rate-limit'
 

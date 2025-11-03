@@ -1,7 +1,7 @@
 // src/routes/driverRoutes.ts
 
 import { Router } from 'express';
-import { driverController } from '@/controllers/driverController.js';
+import { driverController } from '@/api/driver/controller.js';
 import { authenticateToken, authorize } from '@/middleware/auth.js';
 
 const router = Router();

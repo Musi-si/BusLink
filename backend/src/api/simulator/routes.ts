@@ -1,7 +1,7 @@
 // src/routes/simulatorRoutes.ts
 
 import { Router, Request, Response, NextFunction } from 'express';
-import { simulatorController } from '@/controllers/simulatorController.js';
+import { simulatorController } from '@/api/simulator/controller.js';
 import { AppError } from '@/middleware/errorHandler.js';
 
 const router = Router();

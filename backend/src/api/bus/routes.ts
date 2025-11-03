@@ -1,7 +1,7 @@
 // src/routes/busRoutes.ts
 
 import { Router } from 'express';
-import { busController } from '@/controllers/busController.js';
+import { busController } from '@/api/bus/controller.js';
 import { authenticateToken, authorize } from '@/middleware/auth.js';
 
 const router = Router();
