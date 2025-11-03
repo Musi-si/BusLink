@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import prisma from '@/config/prisma';
-import AppError from '@/utils/AppError';
-import { AuthRequest } from '@/types';
+import prisma from '@/config/prisma.js';
+import AppError from '@/utils/AppError.js';
+import { AuthRequest } from '@/types/index.js';
 
 export class NotificationController {
   // List notifications for the currently logged-in user
@@ -20,7 +20,8 @@ export class NotificationController {
   // Mark a notification as read
   async markAsRead(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      // const { id } = req.params;
+      const id = parseInt(req.params.id, 10);
       const userId = req.user!.id;
 
       const notification = await prisma.notification.findUnique({ where: { id } });
@@ -33,7 +34,7 @@ export class NotificationController {
 
       const updatedNotification = await prisma.notification.update({
         where: { id },
-        data: { status: 'READ' },
+        data: { isRead: true },
       });
       res.status(200).json({ status: 'success', data: updatedNotification });
     } catch (error) {
