@@ -3,6 +3,7 @@
 import express, { Router } from 'express'
 import { AuthController } from '@/api/auth/controller.js'
 import { authenticateToken } from '@/middleware/auth.js'
+import { validate } from '@/middleware/validate.js'
 import rateLimit from 'express-rate-limit'
 
 const router: Router = express.Router()
@@ -145,6 +146,97 @@ router.post('/login', authLimiter, authController.login)
  *         description: Invalid or expired token.
  */
 router.get('/verify', authController.verify)
+
+/**
+ * @openapi
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset OTP
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: string, format: email, example: "user@example.com" }
+ *     responses:
+ *       '200': { description: "If a user with that email exists, an OTP has been sent." }
+ */
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
+
+/**
+ * @openapi
+ * /auth/verify-otp:
+ *   post:
+ *     summary: Verify OTP for password reset
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: string, format: email, example: "user@example.com" }
+ *               otp: { type: string, example: "123456" }
+ *     responses:
+ *       '200':
+ *         description: "OTP verified successfully. Returns a passwordResetToken."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 passwordResetToken: { type: string }
+ *       '400': { description: "Invalid or expired OTP." }
+ */
+router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), authController.verifyOtp);
+
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password with passwordResetToken
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               passwordResetToken: { type: string }
+ *               newPassword: { type: string, format: password }
+ *     responses:
+ *       '200': { description: "Password reset successfully." }
+ *       '400': { description: "Invalid or expired password reset token." }
+ */
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   patch:
+ *     summary: Change current user's password
+ *     tags: [Auth]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword: { type: string, format: password }
+ *               newPassword: { type: string, format: password }
+ *     responses:
+ *       '200': { description: "Password changed successfully." }
+ *       '401': { description: "Incorrect current password." }
+ */
+router.patch('/change-password', authenticateToken, authController.changePassword);
 
 /**
  * @openapi

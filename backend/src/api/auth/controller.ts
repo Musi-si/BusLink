@@ -255,7 +255,129 @@ export class AuthController {
     }
   }
 
-  async logout(req: AuthRequest, res: Response) {
+  async logout(res: Response) {
     return res.status(200).json({ message: 'Logged out successfully.' });
+  }
+
+  // Forgot Password - Step 1: Request OTP
+  async forgotPassword(req: Request, res: Response): Promise<Response> {
+    try {
+      const { email } = req.body;
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (!user) {
+        // Always send a generic success message to prevent email enumeration attacks
+        return res.status(200).json({ message: 'If a user with that email exists, an OTP has been sent.' });
+      }
+
+      // Generate a 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
+
+      // Store OTP and expiry in the user record
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otp, otpExpiresAt },
+      });
+
+      // Send OTP via email
+      await sendPasswordResetOTP(user.fullName, user.email, otp);
+      
+      return res.status(200).json({ message: 'If a user with that email exists, an OTP has been sent to your email.' });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // Forgot Password - Step 2: Verify OTP
+  async verifyOtp(req: Request, res: Response): Promise<Response> {
+    try {
+      const { email, otp } = req.body;
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (!user || !user.otp || user.otp !== otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+        return res.status(400).json({ message: 'Invalid or expired OTP.' });
+      }
+
+      // OTP is valid. Invalidate it immediately to prevent reuse.
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          otp: null,
+          otpExpiresAt: null,
+        },
+      });
+
+      // Generate a new, short-lived token specifically for password reset
+      const passwordResetToken = jwt.sign(
+        { userId: user.id, purpose: 'PASSWORD_RESET' },
+        process.env.JWT_SECRET!,
+        { expiresIn: '10m' } // This token is valid for 10 minutes to perform the reset
+      );
+
+      return res.status(200).json({ message: 'OTP verified successfully.', passwordResetToken });
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      return res.status(500).json({ message: 'Failed to verify OTP.' });
+    }
+  }
+
+  // Forgot Password - Step 3: Reset Password with passwordResetToken
+  async resetPassword(req: Request, res: Response): Promise<Response> {
+    try {
+      const { passwordResetToken, newPassword } = req.body;
+
+      if (!passwordResetToken || !newPassword) {
+        return res.status(400).json({ message: 'Token and new password are required.' });
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(passwordResetToken, process.env.JWT_SECRET!) as { userId: string, purpose: string };
+      } catch (jwtError: any) {
+        return res.status(400).json({ message: 'Invalid or expired password reset token.' });
+      }
+
+      if (decoded.purpose !== 'PASSWORD_RESET') {
+        return res.status(400).json({ message: 'Invalid token purpose.' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await prisma.user.update({
+        where: { id: decoded.userId },
+        data: { password: hashedPassword }
+      });
+
+      // Optionally, you might want to consider revoking all other tokens for this user for security
+      return res.status(200).json({ message: 'Password has been reset successfully. Please login with your new password.' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return res.status(500).json({ message: 'Failed to reset password.' });
+    }
+  }
+
+  // Change Password (for logged-in user)
+  async changePassword(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user!.id;
+      
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+        return res.status(401).json('Incorrect current password.');
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await prisma.user.update({
+          where: { id: userId },
+          data: { password: hashedPassword }
+      });
+
+      return res.status(200).json({ message: 'Password changed successfully.' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
   }
 }
