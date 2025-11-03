@@ -2,7 +2,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/prisma.js';
+import prisma from '@/config/prisma.js';
 import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
 // FIX: Add calculateRouteETAs and BusLocation to the import
 import { calculateRealTimeETA, calculateRouteETAs, Location } from '@/utils/etaCalculator.js';import { busStateManager } from '@/services/busStateManager.js';

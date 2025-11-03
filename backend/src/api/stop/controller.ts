@@ -2,7 +2,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/prisma.js';
+import prisma from '@/config/prisma.js';
 import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
 import { findNearbyStops, Location } from '@/utils/etaCalculator.js';
 

@@ -2,7 +2,7 @@
 
 import { Response } from 'express';
 import { Prisma } from '@prisma/client';
-import prisma from '@/lib/prisma.js';
+import prisma from '@/config/prisma.js';
 import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
 import { AuthRequest } from '@/types/index.js';
 import { randomBytes } from 'crypto';

@@ -4,6 +4,7 @@ import express, { Router } from 'express'
 import { AuthController } from '@/api/auth/controller.js'
 import { authenticateToken } from '@/middleware/auth.js'
 import { validate } from '@/middleware/validate.js'
+import { signupSchema, loginSchema, forgotPasswordSchema, verifyOtpSchema, resetPasswordSchema, changePasswordSchema } from './validation.js'; 
 import rateLimit from 'express-rate-limit'
 
 const router: Router = express.Router()
@@ -77,7 +78,7 @@ const authLimiter = rateLimit({
  *       '500':
  *         description: Internal server error.
  */
-router.post('/register', authLimiter, authController.register)
+router.post('/register', authLimiter, validate(signupSchema), authController.register)
 
 /**
  * @openapi
@@ -120,7 +121,7 @@ router.post('/register', authLimiter, authController.register)
  *       '401':
  *         description: Email not verified.
  */
-router.post('/login', authLimiter, authController.login)
+router.post('/login', authLimiter, validate(loginSchema), authController.login)
 
 /**
  * @openapi
@@ -236,7 +237,7 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authC
  *       '200': { description: "Password changed successfully." }
  *       '401': { description: "Incorrect current password." }
  */
-router.patch('/change-password', authenticateToken, authController.changePassword);
+router.patch('/change-password', authenticateToken, validate(changePasswordSchema), authController.changePassword);
 
 /**
  * @openapi

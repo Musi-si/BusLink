@@ -1,11 +1,11 @@
 // controllers/authController.ts
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
-import prisma from '@/lib/prisma.js';
-import transporter from '@/utils/email.js';
+import prisma from '@/config/prisma.js';
+import { sendVerificationEmail, sendPasswordResetOTP } from '@/services/email.js';
 import { AuthRequest } from '@/types/index.js';
 import logger from '@/utils/logger.js';
 
@@ -44,30 +44,32 @@ export class AuthController {
       };
 
   const token = jwt.sign(verificationPayload, SECRET, { expiresIn: '15m' });
+
+  await sendVerificationEmail(name, email, token);
   // Send users to the frontend login page with the verification token so the
   // frontend can call the verify API and display the success toast there.
-  const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
-  const url = `${frontendUrl.replace(/\/$/, '')}/login?verifyToken=${token}`;
+  // const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:8080';
+  // const url = `${frontendUrl.replace(/\/$/, '')}/login?verifyToken=${token}`;
 
-      const htmlEmail = `
-        <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px;">
-            <h2 style="color: #16a34a;">Welcome to BusLink!</h2>
-            <p>Hi <strong>${name}</strong>,</p>
-            <p>Thank you for joining <strong>BusLink</strong> – the platform for real-time bus tracking.</p>
-            <p>To get started, please verify your email address by clicking the button below:</p>
-            <a href="${url}" style="display: inline-block; margin: 20px 0; padding: 14px 28px; font-size: 16px; color: #fff; background-color: #16a34a; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email</a>
-            <p style="font-size: 14px; color: #777;">This link will expire in 15 minutes.</p>
-            <hr style="margin: 30px 0; border-color: #e5e7eb;">
-            <p style="font-size: 12px; color: #999;">If you did not register for BusLink, please ignore this email.</p>
-        </div>
-        `;
+  //     const htmlEmail = `
+  //       <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px;">
+  //           <h2 style="color: #16a34a;">Welcome to BusLink!</h2>
+  //           <p>Hi <strong>${name}</strong>,</p>
+  //           <p>Thank you for joining <strong>BusLink</strong> – the platform for real-time bus tracking.</p>
+  //           <p>To get started, please verify your email address by clicking the button below:</p>
+  //           <a href="${url}" style="display: inline-block; margin: 20px 0; padding: 14px 28px; font-size: 16px; color: #fff; background-color: #16a34a; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email</a>
+  //           <p style="font-size: 14px; color: #777;">This link will expire in 15 minutes.</p>
+  //           <hr style="margin: 30px 0; border-color: #e5e7eb;">
+  //           <p style="font-size: 12px; color: #999;">If you did not register for BusLink, please ignore this email.</p>
+  //       </div>
+  //       `;
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Verify your email for BusLink!',
-        html: htmlEmail,
-      });
+  //     await transporter.sendMail({
+  //       from: process.env.EMAIL_USER,
+  //       to: email,
+  //       subject: 'Verify your email for BusLink!',
+  //       html: htmlEmail,
+  //     });
 
       // FIX: Added return statement
       return res.status(201).json({ message: 'Verification email sent successfully.' });
@@ -281,7 +283,7 @@ export class AuthController {
       });
 
       // Send OTP via email
-      await sendPasswordResetOTP(user.fullName, user.email, otp);
+      await sendPasswordResetOTP(user.name, user.email, otp);
       
       return res.status(200).json({ message: 'If a user with that email exists, an OTP has been sent to your email.' });
     } catch (error) {
@@ -345,7 +347,7 @@ export class AuthController {
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
       await prisma.user.update({
-        where: { id: decoded.userId },
+        where: { id: parseInt(decoded.userId) },
         data: { password: hashedPassword }
       });
 

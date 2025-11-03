@@ -10,7 +10,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { Server as SocketIOServer } from 'socket.io';
 
-import prisma from '@/lib/prisma.js';
+import prisma from '@/config/prisma.js';
 import logger from '@/utils/logger.js';
 import { swaggerUi, swaggerSpec } from '@/swagger.js';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler.js';
