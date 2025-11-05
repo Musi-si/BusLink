@@ -1,10 +1,10 @@
 // src/controllers/routeController.ts
 
-import { Request, Response } from 'express'
-import { Prisma } from '@prisma/client'
-import prisma from '@/config/prisma.js'
-import { asyncHandler, AppError } from '@/middleware/errorHandler.js'
-import { calculateRouteETAs, BusLocation } from '@/utils/etaCalculator.js'
+import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
+import prisma from '@/config/prisma.js';
+import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
+import { calculateRouteETAs, BusLocation } from '@/utils/etaCalculator.js';
 
 class RouteController {
   /**
@@ -12,14 +12,14 @@ class RouteController {
    * GET /api/routes
    */
   getAllRoutes = asyncHandler(async (req: Request, res: Response) => {
-    const { page = '1', limit = '20', search } = req.query
-    const pageNum = parseInt(page as string)
-    const limitNum = parseInt(limit as string)
-    const skip = (pageNum - 1) * limitNum
+    const { page = '1', limit = '20', search } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
 
-    const where: Prisma.RouteWhereInput = { isActive: true }
+    const where: Prisma.RouteWhereInput = { isActive: true };
     if (search && typeof search === 'string') {
-      where.name = { contains: search, mode: 'insensitive' }
+      where.name = { contains: search, mode: 'insensitive' };
     }
 
     const [routes, totalRoutes] = await prisma.$transaction([
@@ -38,7 +38,7 @@ class RouteController {
         },
       }),
       prisma.route.count({ where }),
-    ])
+    ]);
 
     const formattedRoutes = routes.map(route => ({
       id: route.id,
@@ -47,7 +47,7 @@ class RouteController {
       color: route.color,
       stopsCount: route._count.stops,
       activeBusesCount: route._count.buses,
-    }))
+    }));
 
     res.status(200).json({
       success: true,
@@ -58,16 +58,16 @@ class RouteController {
         limit: limitNum,
         totalPages: Math.ceil(totalRoutes / limitNum),
       },
-    })
-  })
+    });
+  });
 
   /**
    * Get a single route by ID, including its stops and active buses.
    * GET /api/routes/:id
    */
   getRouteById = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params
-    const { include_eta = 'true' } = req.query
+    const { id } = req.params;
+    const { include_eta = 'true' } = req.query;
 
     const route = await prisma.route.findUnique({
       where: { id: parseInt(id) },
@@ -78,40 +78,40 @@ class RouteController {
           include: { driver: { select: { id: true, name: true, rating: true } } },
         },
       },
-    })
+    });
 
     if (!route) {
-      throw new AppError('Route not found', 404)
+      throw new AppError('Route not found', 404);
     }
     
     // Create a mutable copy of the route to add ETAs
-    const responseData = { ...route }
+    const responseData = { ...route };
 
     if (include_eta === 'true' && responseData.buses.length > 0 && responseData.stops.length > 0) {
       // Add ETA calculations to each bus on the route
       responseData.buses = responseData.buses.map(bus => {
-        if (!bus.lastLocationLat || !bus.lastLocationLng) return bus
+        if (!bus.lastLocationLat || !bus.lastLocationLng) return bus;
 
         const busLocation: BusLocation = {
           lat: bus.lastLocationLat,
           lng: bus.lastLocationLng,
           speedKmh: bus.lastSpeedKmh ? bus.lastSpeedKmh.toNumber() : 25,
-        }
+        };
 
-        const etas = calculateRouteETAs(busLocation, responseData.stops)
-        return { ...bus, etas } // Attach the calculated ETAs to the bus object
-      }) as any // Cast to any to add the 'etas' property
+        const etas = calculateRouteETAs(busLocation, responseData.stops);
+        return { ...bus, etas }; // Attach the calculated ETAs to the bus object
+      }) as any; // Cast to any to add the 'etas' property
     }
 
-    res.status(200).json({ success: true, data: responseData })
-  })
+    res.status(200).json({ success: true, data: responseData });
+  });
 
   /**
    * Get statistics for a specific route.
    * GET /api/routes/:id/stats
    */
   getRouteStats = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params
+    const { id } = req.params;
 
     const route = await prisma.route.findUnique({
       where: { id: parseInt(id) },
@@ -123,16 +123,16 @@ class RouteController {
           },
         },
       },
-    })
+    });
 
     if (!route) {
-      throw new AppError('Route not found', 404)
+      throw new AppError('Route not found', 404);
     }
 
     // Get active buses count separately
     const activeBusesCount = await prisma.bus.count({
       where: { routeId: parseInt(id), status: { in: ['moving', 'idle', 'arrived'] } },
-    })
+    });
 
     res.status(200).json({
       success: true,
@@ -147,8 +147,8 @@ class RouteController {
           estimatedDurationMinutes: route.estimatedDurationMinutes,
         },
       },
-    })
-  })
+    });
+  });
 }
 
-export const routeController = new RouteController()
+export const routeController = new RouteController();
