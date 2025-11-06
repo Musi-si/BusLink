@@ -30,6 +30,7 @@ import stopRoutes from '@/api/stop/routes.js';
 import bookingRoutes from '@/api/booking/routes.js';
 import driverRoutes from '@/api/driver/routes.js';
 import paymentRoutes from '@/api/payments/routes.js';
+import reportRoutes from '@/api/reports/routes.js';
 import simulatorRoutes from '@/api/simulator/routes.js'; // Dev-only routes
 
 // --- Initialization ---
@@ -88,7 +89,8 @@ app.use('/api/routes', routeRoutes);
 app.use('/api/stops', stopRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/driver', driverRoutes);
-app
+app.use('/api/payments', paymentRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/simulator', simulatorRoutes); // These routes are self-protecting in production
 
 // --- Health Check Endpoint ---

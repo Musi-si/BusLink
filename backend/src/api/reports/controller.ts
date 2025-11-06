@@ -1,152 +1,146 @@
-import { Response, NextFunction } from 'express';
-import prisma from '@/config/prisma';
-import AppError from '@/utils/AppError';
-import { AuthRequest } from '@/types';
-import { AppointmentStatus, PaymentStatus } from '@prisma/client'; // Import enums
+// src/controllers/reportController.ts
 
-export class ReportController {
-  // Generate a high-level summary report for a specific hospital (Hospital Admin/System Admin)
-  async getHospitalReport(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params; // hospitalId
-      const user = req.user!;
+import { Response } from 'express';
+import prisma from '@/config/prisma.js';
+import { asyncHandler, AppError } from '@/middleware/errorHandler.js';
+import { AuthRequest } from '@/types/index.js';
 
-      // Basic Authorization: Only ADMIN or the specific HOSPITAL_ADMIN can view
-      if (user.role === 'HOSPITAL_ADMIN' && user.id !== (await prisma.hospital.findUnique({ where: { id } }))?.adminId) {
-        return next(new AppError('You are not authorized to view this hospital report.', 403));
-      } else if (user.role !== 'ADMIN' && user.role !== 'HOSPITAL_ADMIN') {
-        return next(new AppError('Forbidden.', 403));
-      }
-
-      // Aggregate counts and sums
-      const totalAppointments = await prisma.appointment.count({ where: { hospitalId: id } });
-      const completedAppointments = await prisma.appointment.count({ where: { hospitalId: id, status: AppointmentStatus.COMPLETED } });
-      const pendingAppointments = await prisma.appointment.count({ where: { hospitalId: id, status: AppointmentStatus.PENDING } });
-      const cancelledAppointments = await prisma.appointment.count({ where: { hospitalId: id, status: AppointmentStatus.CANCELLED } });
-
-      const totalDoctors = await prisma.doctor.count({ where: { hospitalId: id } });
-      const totalPatients = await prisma.patient.count({ where: { hospitalId: id } });
-      const totalReceptionists = await prisma.receptionist.count({ where: { hospitalId: id } });
-
-      const earnings = await prisma.payment.aggregate({
+class ReportController {
+  /**
+   * Generates a system-wide summary report. (Admin only)
+   * GET /api/reports/system
+   */
+  getSystemReport = asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Perform all aggregations in parallel for efficiency
+    const [
+      totalUsers, totalDrivers, totalBuses, totalRoutes,
+      totalBookings, completedBookings, cancelledBookings,
+      totalRevenue,
+    ] = await prisma.$transaction([
+      prisma.user.count(),
+      prisma.driver.count(),
+      prisma.bus.count(),
+      prisma.route.count(),
+      prisma.booking.count(),
+      prisma.booking.count({ where: { status: 'completed' } }),
+      prisma.booking.count({ where: { status: 'cancelled' } }),
+      prisma.payment.aggregate({
         _sum: { amount: true },
-        where: { appointment: { hospitalId: id }, status: PaymentStatus.PAID }
-      });
-      
-      res.status(200).json({ status: 'success', data: {
-          hospitalId: id,
-          totalAppointments,
-          completedAppointments,
-          pendingAppointments,
-          cancelledAppointments,
-          totalDoctors,
-          totalPatients,
-          totalReceptionists,
-          totalEarnings: earnings._sum.amount ? parseFloat(earnings._sum.amount.toString()) : 0, // Convert Decimal to number
-      }});
-    } catch (error) {
-      next(error);
+        where: { status: 'paid' },
+      }),
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalUsers, totalDrivers, totalBuses, totalRoutes, totalBookings,
+        completedBookings, cancelledBookings,
+        totalRevenue: totalRevenue._sum.amount?.toNumber() ?? 0,
+      },
+    });
+  });
+
+  /**
+   * Generates a detailed report for a specific route. (Admin only)
+   * GET /api/reports/route/:id
+   */
+  getRouteReport = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const routeId = parseInt(id);
+
+    const route = await prisma.route.findUnique({
+      where: { id: routeId },
+      include: {
+        _count: {
+          select: {
+            stops: { where: { isActive: true } },
+            buses: true,
+          },
+        },
+      },
+    });
+
+    if (!route) {
+      throw new AppError('Route not found', 404);
     }
-  }
 
-  // Generate a system-wide summary report (System Admin only)
-  async getSystemReport(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      // Authorization is handled by router.authorize(['ADMIN'])
-
-      const totalUsers = await prisma.user.count();
-      const totalHospitals = await prisma.hospital.count();
-      const totalDoctors = await prisma.doctor.count();
-      const totalPatients = await prisma.patient.count();
-      const totalReceptionists = await prisma.receptionist.count();
-      const totalAppointments = await prisma.appointment.count();
-      const completedAppointments = await prisma.appointment.count({ where: { status: AppointmentStatus.COMPLETED } });
-      const pendingAppointments = await prisma.appointment.count({ where: { status: AppointmentStatus.PENDING } });
-      const cancelledAppointments = await prisma.appointment.count({ where: { status: AppointmentStatus.CANCELLED } });
-
-      const totalEarnings = await prisma.payment.aggregate({
-          _sum: { amount: true },
-          where: { status: PaymentStatus.PAID }
-      });
-
-      res.status(200).json({ status: 'success', data: {
-          totalUsers,
-          totalHospitals,
-          totalDoctors,
-          totalPatients,
-          totalReceptionists,
-          totalAppointments,
-          completedAppointments,
-          pendingAppointments,
-          cancelledAppointments,
-          totalEarnings: totalEarnings._sum.amount ? parseFloat(totalEarnings._sum.amount.toString()) : 0,
-      }});
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  // NEW: Generate a personalized report for the authenticated Patient
-  async getPatientReport(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const userId = req.user!.id;
-      const patientProfile = await prisma.patient.findUnique({ where: { userId } });
-
-      if (!patientProfile) {
-        return next(new AppError('Patient profile not found.', 404));
-      }
-
-      const totalAppointments = await prisma.appointment.count({ where: { patientId: patientProfile.id } });
-      const completedAppointments = await prisma.appointment.count({ where: { patientId: patientProfile.id, status: AppointmentStatus.COMPLETED } });
-      const upcomingAppointments = await prisma.appointment.count({ where: { patientId: patientProfile.id, status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } } });
-      const totalConsultations = await prisma.consultation.count({ where: { appointment: { patientId: patientProfile.id } } });
-      const totalPayments = await prisma.payment.aggregate({
+    const [bookingsOnRoute, revenueFromRoute] = await prisma.$transaction([
+      prisma.booking.count({ where: { routeId } }),
+      prisma.payment.aggregate({
         _sum: { amount: true },
-        where: { patientId: patientProfile.id, status: PaymentStatus.PAID }
-      });
+        where: { status: 'paid', booking: { routeId } },
+      }),
+    ]);
 
-      res.status(200).json({ status: 'success', data: {
-        patientId: patientProfile.id,
-        totalAppointments,
-        completedAppointments,
-        upcomingAppointments,
-        totalConsultations,
-        totalPayments: totalPayments._sum.amount ? parseFloat(totalPayments._sum.amount.toString()) : 0,
-      }});
-    } catch (error) {
-      next(error);
-    }
-  }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        routeId: route.id,
+        routeName: route.name,
+        totalStops: route._count.stops,
+        totalBusesAssigned: route._count.buses,
+        totalBookings: bookingsOnRoute,
+        totalRevenue: revenueFromRoute._sum.amount?.toNumber() ?? 0,
+      },
+    });
+  });
 
-  // NEW: Generate a personalized report for the authenticated Doctor
-  async getDoctorReport(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const userId = req.user!.id;
-      const doctorProfile = await prisma.doctor.findUnique({ where: { userId } });
+  /**
+   * Generates a personalized report for the authenticated passenger.
+   * GET /api/reports/passenger/me
+   */
+  getPassengerReport = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
 
-      if (!doctorProfile) {
-        return next(new AppError('Doctor profile not found.', 404));
-      }
-
-      const totalAppointments = await prisma.appointment.count({ where: { doctorId: doctorProfile.id } });
-      const completedAppointments = await prisma.appointment.count({ where: { doctorId: doctorProfile.id, status: AppointmentStatus.COMPLETED } });
-      const upcomingAppointments = await prisma.appointment.count({ where: { doctorId: doctorProfile.id, status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } } });
-      const totalConsultations = await prisma.consultation.count({ where: { appointment: { doctorId: doctorProfile.id } } });
-      const totalEarnings = await prisma.payment.aggregate({
+    const [totalBookings, completedBookings, totalSpent] = await prisma.$transaction([
+      prisma.booking.count({ where: { userId } }),
+      prisma.booking.count({ where: { userId, status: 'completed' } }),
+      prisma.payment.aggregate({
         _sum: { amount: true },
-        where: { appointment: { doctorId: doctorProfile.id }, status: PaymentStatus.PAID }
-      });
+        where: { booking: { userId }, status: 'paid' },
+      }),
+    ]);
 
-      res.status(200).json({ status: 'success', data: {
-        doctorId: doctorProfile.id,
-        totalAppointments,
-        completedAppointments,
-        upcomingAppointments,
-        totalConsultations,
-        totalEarnings: totalEarnings._sum.amount ? parseFloat(totalEarnings._sum.amount.toString()) : 0,
-      }});
-    } catch (error) {
-      next(error);
+    res.status(200).json({
+      status: 'success',
+      data: {
+        userId,
+        totalBookings,
+        completedBookings,
+        totalSpent: totalSpent._sum.amount?.toNumber() ?? 0,
+      },
+    });
+  });
+
+  /**
+   * Generates a personalized report for the authenticated driver.
+   * GET /api/reports/driver/me
+   */
+  getDriverReport = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const driverProfile = await prisma.driver.findUnique({ where: { userId } });
+
+    if (!driverProfile) {
+      throw new AppError('Driver profile not found.', 404);
     }
-  }
+
+    const [totalTrips, totalBookingsOnBus] = await prisma.$transaction([
+      prisma.trip.count({ where: { driverId: driverProfile.id } }),
+      prisma.booking.count({
+        where: { bus: { driverId: driverProfile.id } },
+      }),
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        driverId: driverProfile.id,
+        totalTrips,
+        totalBookingsServed: totalBookingsOnBus,
+        currentRating: driverProfile.rating,
+      },
+    });
+  });
 }
+
+export const reportController = new ReportController();

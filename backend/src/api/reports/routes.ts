@@ -1,82 +1,83 @@
+// src/routes/reportRoutes.ts
+
 import { Router } from 'express';
-import { ReportController } from './controller';
-import { authenticateToken, authorize } from '../../middleware/auth';
+import { reportController } from '@/api/reports/controller.js';
+import { authenticateToken, authorize } from '@/middleware/auth.js';
 
 const router = Router();
-const reportController = new ReportController();
 
 /**
  * @openapi
  * tags:
  *   name: Reports
- *   description: Endpoints for generating analytics and summary reports.
+ *   description: Endpoints for generating analytics and summary reports. All endpoints require authentication.
  */
 
+// All report routes require authentication.
 router.use(authenticateToken);
 
 /**
  * @openapi
- * /reports/hospital/{id}:
+ * /api/reports/system:
  *   get:
- *     summary: Get a report for a specific hospital
+ *     summary: Get a system-wide report (Admin only)
  *     tags: [Reports]
  *     security: [{ bearerAuth: [] }]
- *     description: Retrieves key performance indicators for a single hospital, such as total appointments and earnings. Accessible by System Admins and the hospital's own Admin.
+ *     description: Retrieves platform-wide analytics like total users, buses, bookings, and revenue.
+ *     responses:
+ *       '200': { description: "System-wide analytics report." }
+ *       '403': { description: "Forbidden - requires admin role." }
+ */
+router.get('/system', authorize(['admin']), reportController.getSystemReport);
+
+/**
+ * @openapi
+ * /api/reports/route/{id}:
+ *   get:
+ *     summary: Get a report for a specific route (Admin only)
+ *     tags: [Reports]
+ *     security: [{ bearerAuth: [] }]
+ *     description: Retrieves key performance indicators for a single route.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema: { type: string, format: uuid }
- *         description: The UUID of the hospital.
+ *         schema: { type: integer }
+ *         description: The numeric ID of the route.
  *     responses:
- *       '200': { description: "Hospital performance report." }
- *       '403': { description: "Forbidden." }
- *       '404': { description: "Hospital not found." }
+ *       '200': { description: "Route performance report." }
+ *       '403': { description: "Forbidden - requires admin role." }
+ *       '404': { description: "Route not found." }
  */
-router.get('/hospital/:id', authorize(['ADMIN', 'HOSPITAL_ADMIN']), reportController.getHospitalReport);
+router.get('/route/:id', authorize(['admin']), reportController.getRouteReport);
 
 /**
  * @openapi
- * /reports/system:
+ * /api/reports/passenger/me:
  *   get:
- *     summary: Get a system-wide report
+ *     summary: Get the current passenger's personalized report
  *     tags: [Reports]
  *     security: [{ bearerAuth: [] }]
- *     description: Retrieves platform-wide analytics. Accessible by System Admins only.
+ *     description: Retrieves a summary of the authenticated passenger's activities.
  *     responses:
- *       '200': { description: "System-wide analytics report." }
- *       '403': { description: "Forbidden." }
+ *       '200': { description: "Passenger's personalized report." }
+ *       '403': { description: "Forbidden - requires passenger role." }
  */
-router.get('/system', authorize(['ADMIN']), reportController.getSystemReport);
+router.get('/passenger/me', authorize(['passenger']), reportController.getPassengerReport);
 
 /**
  * @openapi
- * /reports/patient/me:
+ * /api/reports/driver/me:
  *   get:
- *     summary: Get current patient's personalized report
+ *     summary: Get the current driver's personalized report
  *     tags: [Reports]
  *     security: [{ bearerAuth: [] }]
- *     description: Retrieves a high-level summary of a patient's activities, including appointment counts and total payments.
+ *     description: Retrieves a summary of the authenticated driver's performance metrics.
  *     responses:
- *       '200': { description: "Patient's personalized report." }
- *       '403': { description: "Forbidden." }
- *       '404': { description: "Patient profile not found." }
+ *       '200': { description: "Driver's personalized report." }
+ *       '403': { description: "Forbidden - requires driver role." }
+ *       '404': { description: "Driver profile not found." }
  */
-router.get('/patient/me', authorize(['PATIENT']), reportController.getPatientReport);
-
-/**
- * @openapi
- * /reports/doctor/me:
- *   get:
- *     summary: Get current doctor's personalized report
- *     tags: [Reports]
- *     security: [{ bearerAuth: [] }]
- *     description: Retrieves a high-level summary of a doctor's activities, including appointment counts and total earnings.
- *     responses:
- *       '200': { description: "Doctor's personalized report." }
- *       '403': { description: "Forbidden." }
- *       '404': { description: "Doctor profile not found." }
- */
-router.get('/doctor/me', authorize(['DOCTOR']), reportController.getDoctorReport);
+router.get('/driver/me', authorize(['driver']), reportController.getDriverReport);
 
 export default router;
