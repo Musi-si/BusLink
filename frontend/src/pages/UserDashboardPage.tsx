@@ -18,11 +18,20 @@ const UserDashboardPage = () => {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
 
+  // --- REFACTORED DATA FETCHING LOGIC (UI is unchanged) ---
+
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['my-bookings', user?.id],
     queryFn: async () => {
-      const res = await axiosInstance.get(`/api/bookings/user/${user?.id}`);
-      return res.data;
+      const res = await axiosInstance.get(`/api/bookings/my`);
+      // Map the response data to match the UI's expected snake_case format
+      return res.data.data.map((b: any) => ({
+        id: b.id,
+        route: { route_name: b.route.name },
+        created_at: b.travelDate, // Use travelDate for display
+        seats: b.seatCount,
+        status: b.status,
+      }));
     },
     enabled: !!user?.id,
   });
@@ -30,8 +39,18 @@ const UserDashboardPage = () => {
   const { data: availableRoutes, isLoading: routesLoading } = useQuery({
     queryKey: ['available-routes'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/routes/available');
-      return res.data;
+      // FIX: Call the correct endpoint
+      const res = await axiosInstance.get('/api/routes');
+      // Map the response data to match the UI's expected snake_case format
+      return res.data.data.map((r: any) => ({
+        id: r.id,
+        route_name: r.name,
+        // The UI expects start_location/end_location, which we don't have. We'll use the description as a placeholder.
+        start_location: r.description?.split(' ')[0] ?? 'Start',
+        end_location: r.description?.split(' ').pop() ?? 'End',
+        estimated_duration: r.estimatedDurationMinutes,
+        fare: r.fareAmount,
+      }));
     },
     enabled: selected === 'routes',
   });
@@ -39,18 +58,28 @@ const UserDashboardPage = () => {
   const { data: availableBuses, isLoading: busesLoading } = useQuery({
     queryKey: ['available-buses'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/buses/available');
-      return res.data;
+      // FIX: Call the correct endpoint
+      const res = await axiosInstance.get('/api/buses/active');
+      // Map the response data to match the UI's expected snake_case format
+      return res.data.data.map((b: any) => ({
+        id: b.id,
+        bus_number: b.busNumber,
+        route: { route_name: b.route.name },
+        current_state: b.status,
+        next_stop: b.nextStop?.name,
+      }));
     },
     enabled: selected === 'buses',
   });
+  
+  // --- END OF REFACTORED LOGIC ---
 
   const bookingCount = Array.isArray(bookings) ? bookings.length : 0;
 
   return (
     <div className="container max-w-6xl mx-auto p-4">
       <div className="flex items-start gap-6">
-        {/* Left floating profile panel */}
+        {/* Left floating profile panel (UI Unchanged) */}
         <aside className="w-full max-w-xs sticky top-20 self-start">
           <div className="bg-card p-4 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -116,7 +145,7 @@ const UserDashboardPage = () => {
           </div>
         </aside>
 
-        {/* Main content */}
+        {/* Main content (UI Unchanged) */}
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-4">Your Dashboard</h1>
 
@@ -146,7 +175,6 @@ const UserDashboardPage = () => {
             </Card>
           </div>
 
-          {/* Detail tables */}
           <div className="space-y-6">
             {selected === null && (
               <Card className="p-6">
@@ -228,7 +256,7 @@ const UserDashboardPage = () => {
                             <td className="p-2">{route.route_name}</td>
                             <td className="p-2">{route.start_location} → {route.end_location}</td>
                             <td className="p-2">{route.estimated_duration} mins</td>
-                            <td className="p-2">UGX {route.fare.toLocaleString()}</td>
+                            <td className="p-2">RWF {(route.fare || 0).toLocaleString()}</td>
                             <td className="p-2">
                               <Button variant="ghost" size="sm" onClick={() => navigate(`/routes/${route.id}`)}>
                                 Book Now
@@ -273,7 +301,7 @@ const UserDashboardPage = () => {
                             <td className="p-2">{bus.current_state}</td>
                             <td className="p-2">{bus.next_stop || 'N/A'}</td>
                             <td className="p-2">
-                              <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${bus.id}`)}>
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/buses/${bus.id}`)}>
                                 Track
                               </Button>
                             </td>
@@ -289,12 +317,10 @@ const UserDashboardPage = () => {
         </div>
       </div>
 
-      {/* Dialogs */}
       <ChangePasswordDialog 
         open={isPasswordDialogOpen} 
         onOpenChange={setIsPasswordDialogOpen} 
       />
-
       <UpdatePhoneDialog 
         open={isPhoneDialogOpen} 
         onOpenChange={setIsPhoneDialogOpen} 

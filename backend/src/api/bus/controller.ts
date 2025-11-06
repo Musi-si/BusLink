@@ -40,6 +40,7 @@ class BusController {
    */
   getBusById = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
+    
     const bus = await prisma.bus.findUnique({
       where: { id: parseInt(id) },
       include: {
