@@ -295,6 +295,6 @@ router.get('/me', authenticateToken, authController.me)
  *       '401':
  *         description: Unauthorized, token is missing or invalid.
  */
-router.post('/logout', authenticateToken, authController.logout)
+router.post('/logout', authenticateToken, authController.logout.bind(authController))
 
 export default router
