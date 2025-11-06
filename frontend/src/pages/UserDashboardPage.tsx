@@ -21,44 +21,43 @@ const UserDashboardPage = () => {
   // --- REFACTORED DATA FETCHING LOGIC (UI is unchanged) ---
 
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['my-bookings', user?.id],
+    queryKey: ['my-bookings'],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/bookings/my`);
       // Map the response data to match the UI's expected snake_case format
       return res.data.data.map((b: any) => ({
         id: b.id,
         route: { route_name: b.route.name },
-        created_at: b.travelDate, // Use travelDate for display
+        created_at: b.travelDate,
         seats: b.seatCount,
         status: b.status,
       }));
     },
-    enabled: !!user?.id,
+    // This query now runs as soon as the user is available.
+    enabled: !!user,
   });
 
   const { data: availableRoutes, isLoading: routesLoading } = useQuery({
     queryKey: ['available-routes'],
     queryFn: async () => {
-      // FIX: Call the correct endpoint
       const res = await axiosInstance.get('/api/routes');
       // Map the response data to match the UI's expected snake_case format
       return res.data.data.map((r: any) => ({
         id: r.id,
         route_name: r.name,
-        // The UI expects start_location/end_location, which we don't have. We'll use the description as a placeholder.
         start_location: r.description?.split(' ')[0] ?? 'Start',
         end_location: r.description?.split(' ').pop() ?? 'End',
         estimated_duration: r.estimatedDurationMinutes,
         fare: r.fareAmount,
       }));
     },
-    enabled: selected === 'routes',
+    // FIX: This query now runs as soon as the user is available, not on click.
+    enabled: !!user,
   });
 
   const { data: availableBuses, isLoading: busesLoading } = useQuery({
     queryKey: ['available-buses'],
     queryFn: async () => {
-      // FIX: Call the correct endpoint
       const res = await axiosInstance.get('/api/buses/active');
       // Map the response data to match the UI's expected snake_case format
       return res.data.data.map((b: any) => ({
@@ -69,13 +68,12 @@ const UserDashboardPage = () => {
         next_stop: b.nextStop?.name,
       }));
     },
-    enabled: selected === 'buses',
+    // FIX: This query also runs as soon as the user is available.
+    enabled: !!user,
   });
   
   // --- END OF REFACTORED LOGIC ---
-
-  const bookingCount = Array.isArray(bookings) ? bookings.length : 0;
-
+  
   return (
     <div className="container max-w-6xl mx-auto p-4">
       <div className="flex items-start gap-6">
@@ -153,7 +151,7 @@ const UserDashboardPage = () => {
             <Card className={`p-4 flex items-center justify-between cursor-pointer ${selected === 'bookings' ? 'ring-2 ring-primary' : ''}`} onClick={() => setSelected('bookings')}>
               <div>
                 <div className="text-sm text-muted-foreground">Your Bookings</div>
-                <div className="text-2xl font-bold">{bookingsLoading ? '—' : bookingCount}</div>
+                <div className="text-2xl font-bold">{bookingsLoading ? '—' : (Array.isArray(bookings) ? bookings.length : 0)}</div>
               </div>
               <CalendarDays className="h-8 w-8 text-primary" />
             </Card>
