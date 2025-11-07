@@ -26,13 +26,13 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordProps
         title: 'Password mismatch',
         description: 'New password and confirmation must match',
         variant: 'destructive',
-      });
+      })
       return;
     }
 
     setIsLoading(true);
     try {
-      await axiosInstance.post('/api/auth/change-password', {
+      await axiosInstance.patch('/api/auth/change-password', {
         currentPassword,
         newPassword,
       });
