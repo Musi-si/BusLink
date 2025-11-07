@@ -37,7 +37,7 @@ export const sendVerificationEmail = async (name: string, email: string, token: 
         <p>Hi <strong>${name}</strong>,</p>
         <p>Thank you for joining <strong>BusLink</strong> – the platform for real-time bus tracking.</p>
         <p>To get started, please verify your email address by clicking the button below:</p>
-        a href="${url}" style="display: inline-block; margin: 20px 0; padding: 14px 28px; font-size: 16px; color: #fff; background-color: #16a34a; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email</a>
+        <a href="${url}" style="display: inline-block; margin: 20px 0; padding: 14px 28px; font-size: 16px; color: #fff; background-color: #16a34a; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email</a>
         <p style="font-size: 14px; color: #777;">This link will expire in 15 minutes.</p>
         <hr style="margin: 30px 0; border-color: #e5e7eb;">
         <p style="font-size: 12px; color: #999;">If you did not register for BusLink, please ignore this email.</p>
