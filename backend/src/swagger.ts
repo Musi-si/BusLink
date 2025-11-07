@@ -38,7 +38,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
     ],
   },
   // Path to the files containing OpenAPI definitions
-  apis: [path.resolve(__dirname, './routes/*.ts')],
+  apis: [path.resolve(__dirname, './api/*/routes.ts')],
 }
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions)
