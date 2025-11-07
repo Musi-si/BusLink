@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPassword";
 import RegisterPage from "./pages/RegisterPage";
 import EmailVerification from "./pages/EmailVerification";
 import RouteDetailPage from "./pages/RouteDetailPage";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/verify-email" element={<EmailVerification />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/routes/:id" element={<RouteDetailPage />} />
             <Route
               path="/my-bookings"
