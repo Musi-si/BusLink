@@ -109,7 +109,7 @@ class BookingController {
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, phone: true } },
         bus: { include: { driver: true } },
         route: true, fromStop: true, toStop: true,
       },

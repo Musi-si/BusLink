@@ -8,6 +8,7 @@ import { CalendarDays, MapPin, Truck, Bell, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { UpdatePhoneDialog } from '@/components/auth/UpdatePhoneDialog';
+import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
 
 type SelectedView = 'bookings' | 'routes' | 'buses' | null;
 
@@ -17,6 +18,8 @@ const UserDashboardPage = () => {
   const [selected, setSelected] = useState<SelectedView>(null);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
+  const [isBookingDetailsOpen, setIsBookingDetailsOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | undefined>();
 
   // --- REFACTORED DATA FETCHING LOGIC (UI is unchanged) ---
 
@@ -214,7 +217,14 @@ const UserDashboardPage = () => {
                             <td className="p-2">{booking.seats}</td>
                             <td className="p-2">{booking.status}</td>
                             <td className="p-2">
-                              <Button variant="ghost" size="sm" onClick={() => navigate(`/bookings/${booking.id}`)}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  setSelectedBookingId(booking.id);
+                                  setIsBookingDetailsOpen(true);
+                                }}
+                              >
                                 View
                               </Button>
                             </td>
@@ -325,6 +335,11 @@ const UserDashboardPage = () => {
       <UpdatePhoneDialog 
         open={isPhoneDialogOpen} 
         onOpenChange={setIsPhoneDialogOpen} 
+      />
+      <BookingDetailsDialog 
+        open={isBookingDetailsOpen} 
+        onOpenChange={setIsBookingDetailsOpen} 
+        bookingId={selectedBookingId}
       />
     </div>
   );
