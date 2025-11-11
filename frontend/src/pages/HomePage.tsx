@@ -30,7 +30,7 @@ function DashboardShortcut() {
 
   return (
     <div className="mb-4">
-      <Button variant="ghost" size="sm" asChild className="w-full justify-start">
+      <Button variant="default" size="sm" asChild className="w-full justify-cennter">
         <Link to={to}>Go to Dashboard</Link>
       </Button>
     </div>
@@ -56,7 +56,7 @@ const HomePage = () => {
         <Sheet>
           <SheetTrigger asChild>
             <Button size="icon" variant="secondary" className="shadow-lg">
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-3" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-80">
