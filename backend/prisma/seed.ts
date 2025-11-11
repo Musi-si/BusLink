@@ -17,8 +17,8 @@ const sampleUsers = [
 ];
 
 const sampleRoutes = [
-  { id: 1, name: 'Nyabugogo - City Center', fareAmount: 500 },
-  { id: 2, name: 'Remera - Kimironko', fareAmount: 300 },
+  { id: 1, name: 'Nyabugogo - City Center', fareAmount: 500, distanceKm: 6.2, estimatedDurationMinutes: 18 },
+  { id: 2, name: 'Remera - Kimironko', fareAmount: 300, distanceKm: 4.5, estimatedDurationMinutes: 12 },
 ];
 
 const sampleStops = [
@@ -78,6 +78,8 @@ async function main() {
       data: {
         name: routeData.name,
         fareAmount: routeData.fareAmount,
+        distanceKm: routeData.distanceKm ?? undefined,
+        estimatedDurationMinutes: routeData.estimatedDurationMinutes ?? undefined,
         stops: {
           create: sampleStops.filter(s => s.routeId === routeData.id).map(({ routeId, ...stop }) => stop),
         },
@@ -120,7 +122,7 @@ async function main() {
     await prisma.trip.create({
       data: {
         driverId: driver.id, routeId: route.id, busId: bus.id,
-        status: 'completed', distanceKm: 8.5, durationMins: 25,
+        status: 'completed', distanceKm: Number(route.distanceKm) || 8.5, durationMins: Number(route.estimatedDurationMinutes) || 25,
         endedAt: new Date(),
       },
     });
@@ -133,7 +135,7 @@ async function main() {
   const busForBooking = createdBuses[0];
   const routeForBooking = routesWithStops.find(r => r.id === busForBooking.routeId)!;
 
-  const booking = await prisma.booking.create({
+      const booking = await prisma.booking.create({
     data: {
       userId: passengerUser.id,
       busId: busForBooking.id,
@@ -141,7 +143,7 @@ async function main() {
       fromStopId: routeForBooking.stops[0].id,
       toStopId: routeForBooking.stops[2].id,
       seatCount: 2,
-      totalFare: (routeMap.get(busForBooking.routeId)?.fareAmount ?? 500) * 2,
+      	  totalFare: Number(routeMap.get(busForBooking.routeId)?.fareAmount ?? 500) * 2,
       travelDate: new Date(),
       bookingReference: `BKL${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`,
       status: 'completed',
@@ -160,7 +162,7 @@ async function main() {
   });
 
   // Create a pending booking
-  await prisma.booking.create({
+      await prisma.booking.create({
     data: {
       userId: passengerUser.id,
       busId: busForBooking.id,
@@ -168,7 +170,7 @@ async function main() {
       fromStopId: routeForBooking.stops[0].id,
       toStopId: routeForBooking.stops[1].id,
       seatCount: 1,
-      totalFare: routeMap.get(busForBooking.routeId)?.fareAmount ?? 500,
+          totalFare: Number(routeMap.get(busForBooking.routeId)?.fareAmount ?? 500),
       travelDate: new Date(),
       bookingReference: `BKL${(Date.now() + 1).toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`,
       status: 'pending',
