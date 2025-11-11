@@ -8,7 +8,7 @@ import { axiosInstance } from '@/lib/axios';
 import { useToast } from '@/hooks/use-toast';
 
 const LandingPage = () => {
-  const { isAuthenticated, clearAuth } = useAuthStore();
+  const { isAuthenticated, clearAuth, user } = useAuthStore();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -24,6 +24,19 @@ const LandingPage = () => {
       navigate('/');
     }
   };
+
+  const dashboardPath = (() => {
+    switch (user?.role) {
+      case 'driver':
+        return '/driver/dashboard';
+      case 'admin':
+        return '/dashboard/admin';
+      case 'passenger':
+        return '/dashboard/passenger';
+      default:
+        return '/';
+    }
+  })();
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,7 +96,7 @@ const LandingPage = () => {
                     <Link to="/tracking">Start Tracking</Link>
                   </Button>
                   <Button size="lg" variant="outline" asChild>
-                    <Link to="/register">Create Account</Link>
+                    <Link to={isAuthenticated ? dashboardPath : '/register'}>{isAuthenticated ? 'Open Dashboard' : 'Create Account'}</Link>
                   </Button>
                 </div>
               </div>
@@ -237,7 +250,7 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button size="lg" variant="secondary" asChild>
-                <Link to="/register">Create Free Account</Link>
+                <Link to={isAuthenticated ? dashboardPath : '/register'}>{isAuthenticated ? 'Open Dashboard' : 'Create Free Account'}</Link>
               </Button>
               <Button
                 size="lg"
