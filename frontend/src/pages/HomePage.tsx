@@ -8,6 +8,34 @@ import { BusInfoPanel } from '@/components/bus/BusInfoPanel';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
+
+function DashboardShortcut() {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return null;
+
+  const to = (() => {
+    switch (user?.role) {
+      case 'driver':
+        return '/driver/dashboard';
+      case 'admin':
+        return '/dashboard/admin';
+      case 'passenger':
+        return '/dashboard/passenger';
+      default:
+        return '/';
+    }
+  })();
+
+  return (
+    <div className="mb-4">
+      <Button variant="ghost" size="sm" asChild className="w-full justify-start">
+        <Link to={to}>Go to Dashboard</Link>
+      </Button>
+    </div>
+  );
+}
 
 const HomePage = () => {
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
@@ -32,12 +60,13 @@ const HomePage = () => {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-80">
-            <SheetHeader>
-              <SheetTitle>Routes</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
-              <RouteList />
-            </div>
+              <DashboardShortcut />
+              <SheetHeader>
+                <SheetTitle>Routes</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
+                <RouteList />
+              </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -45,6 +74,8 @@ const HomePage = () => {
       {/* Desktop Route List Sidebar */}
       <aside className="hidden md:block w-80 border-r bg-card overflow-y-auto">
         <div className="p-4">
+          {/* Dashboard shortcut shown only when user is authenticated - placed above routes list */}
+          <DashboardShortcut />
           <h2 className="text-xl font-bold mb-4">Routes</h2>
           <RouteList />
         </div>
