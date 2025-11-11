@@ -150,10 +150,10 @@ export function BookingDetailsDialog({ open, onOpenChange, bookingId }: BookingD
               </div>
               <div className="font-mono text-sm font-semibold">{booking.bookingReference}</div>
               <div className="flex gap-2 mt-2">
-                <Badge className={getStatusColor(booking.status)}>
+                {/* <Badge className={getStatusColor(booking.status)}>
                   {booking.status}
-                </Badge>
-                <Badge className={getPaymentStatusColor(booking.paymentStatus)}>
+                </Badge> */}
+                <Badge className={getPaymentStatusColor(booking.paymentStatus)} style={{ paddingBottom: '4px' }}>
                   {booking.paymentStatus}
                 </Badge>
               </div>
