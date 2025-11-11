@@ -255,7 +255,7 @@ const UserDashboardPage = () => {
                           <tr key={route.id} className="border-t">
                             <td className="p-2">{route.from}</td>
                             <td className="p-2">{route.to}</td>
-                            <td className="p-2">{route.distance_km}</td>
+                            <td className="p-2">{route.distanceKm}</td>
                             <td className="p-2">{route.estimated_duration} mins</td>
                             <td className="p-2">{(route.fare || 0).toLocaleString()} RWF</td>
                             <td className="p-2">
