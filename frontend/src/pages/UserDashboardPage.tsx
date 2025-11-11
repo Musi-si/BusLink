@@ -41,12 +41,13 @@ const UserDashboardPage = () => {
     queryKey: ['available-routes'],
     queryFn: async () => {
       const res = await axiosInstance.get('/api/routes');
+      console.log('Fetched routes:', res.data);
       // Map the response data to match the UI's expected snake_case format
       return res.data.data.map((r: any) => ({
         id: r.id,
-        route_name: r.name,
-        start_location: r.description?.split(' ')[0] ?? 'Start',
-        end_location: r.description?.split(' ').pop() ?? 'End',
+        from: r.name.split( ' - ' )[0].trim() || 'Unknown',
+        to: r.name.split( ' - ' )[1].trim() || 'Unknown',
+        dist: r.distanceKm ?? 'Unknown',
         estimated_duration: r.estimatedDurationMinutes,
         fare: r.fareAmount,
       }));
@@ -241,8 +242,9 @@ const UserDashboardPage = () => {
                     <table className="w-full table-auto">
                       <thead>
                         <tr className="text-left text-sm text-muted-foreground">
-                          <th className="p-2">Route Name</th>
-                          <th className="p-2">From → To</th>
+                          <th className="p-2">From</th>
+                          <th className="p-2">To</th>
+                          <th className="p-2">Distance (km)</th>
                           <th className="p-2">Duration</th>
                           <th className="p-2">Fare</th>
                           <th className="p-2">Actions</th>
@@ -251,10 +253,11 @@ const UserDashboardPage = () => {
                       <tbody>
                         {availableRoutes.map((route: any) => (
                           <tr key={route.id} className="border-t">
-                            <td className="p-2">{route.route_name}</td>
-                            <td className="p-2">{route.start_location} → {route.end_location}</td>
+                            <td className="p-2">{route.from}</td>
+                            <td className="p-2">{route.to}</td>
+                            <td className="p-2">{route.distance_km}</td>
                             <td className="p-2">{route.estimated_duration} mins</td>
-                            <td className="p-2">RWF {(route.fare || 0).toLocaleString()}</td>
+                            <td className="p-2">{(route.fare || 0).toLocaleString()} RWF</td>
                             <td className="p-2">
                               <Button variant="ghost" size="sm" onClick={() => navigate(`/routes/${route.id}`)}>
                                 Book Now
