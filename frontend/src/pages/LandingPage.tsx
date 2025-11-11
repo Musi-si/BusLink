@@ -1,10 +1,30 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bus, MapPin, Clock, Shield, Users, TrendingUp } from 'lucide-react';
+import { Bus, MapPin, Clock, Shield, Users, TrendingUp, Bell, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { axiosInstance } from '@/lib/axios';
+import { useToast } from '@/hooks/use-toast';
 
 const LandingPage = () => {
+  const { isAuthenticated, clearAuth } = useAuthStore();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post('/api/auth/logout');
+      clearAuth();
+      toast({ title: 'Logged out successfully', description: 'See you next time!' });
+      navigate('/');
+    } catch (error) {
+      // best-effort logout
+      clearAuth();
+      navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -18,12 +38,26 @@ const LandingPage = () => {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button variant="ghost" asChild>
-              <Link to="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/register">Sign Up</Link>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button variant="ghost" size="sm" aria-label="notifications">
+                  <Bell className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/register">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
