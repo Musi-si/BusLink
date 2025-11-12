@@ -13,8 +13,9 @@ export const RouteList = () => {
   const { data: routes, isLoading } = useQuery({
     queryKey: ['routes'],
     queryFn: async () => {
-      const response = await axiosInstance.get<Route[]>('/api/routes');
-      return response.data;
+      const response = await axiosInstance.get('/api/routes');
+      // backend returns { success, data: [...], pagination }
+      return response.data.data as any[];
     },
   });
 
@@ -38,28 +39,26 @@ export const RouteList = () => {
 
   return (
     <div className="space-y-3">
-      {Array.isArray(routes) && routes.map((route) => (
+      {Array.isArray(routes) && routes.map((route: any) => (
         <Card key={route.id} className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-bold text-lg text-primary">
-                  {route.route_number}
-                </span>
-                <span className="text-sm font-medium">{route.route_name}</span>
-                {route.active && (
+                <span className="font-bold text-lg text-primary">{route.name}</span>
+                {route.activeBusesCount > 0 && (
                   <Activity className="h-4 w-4 text-success ml-auto" />
                 )}
               </div>
-              
+
               <div className="space-y-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-3.5 w-3.5" />
-                  <span>{route.start_location} → {route.end_location}</span>
+                  {/* derive start/end from name if possible */}
+                  <span>{(route.name || '').split(' - ')[0] || 'N/A'} → {(route.name || '').split(' - ')[1] || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>{route.estimated_duration_min} min · {route.total_distance_km} km</span>
+                  <span>{route.estimatedDurationMinutes ?? route.estimated_duration_min ?? 'N/A'} min · {route.distanceKm ?? route.total_distance_km ?? 'N/A'} km</span>
                 </div>
               </div>
             </div>
