@@ -3,12 +3,13 @@ import { axiosInstance } from '@/lib/axios';
 import { Route } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import RouteDetailsDialog from './RouteDetailsDialog';
+import { useState } from 'react';
 
 export const RouteList = () => {
-  const navigate = useNavigate();
+  const [selectedRoute, setSelectedRoute] = useState<any>(null);
 
   const { data: routes, isLoading } = useQuery({
     queryKey: ['routes'],
@@ -40,6 +41,7 @@ export const RouteList = () => {
   return (
     <div className="space-y-3">
       {Array.isArray(routes) && routes.map((route: any) => (
+        <>
         <Card key={route.id} className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -68,12 +70,15 @@ export const RouteList = () => {
             size="sm"
             variant="outline"
             className="w-full mt-3"
-            onClick={() => navigate(`/routes/${route.id}`)}
+            onClick={() => setSelectedRoute(route)}
           >
             View Details
           </Button>
         </Card>
+        </>
       ))}
+
+      <RouteDetailsDialog open={!!selectedRoute} onClose={() => setSelectedRoute(null)} route={selectedRoute} />
     </div>
   );
 };
