@@ -44,6 +44,7 @@ class RouteController {
       id: route.id,
       name: route.name,
       description: route.description,
+      polyline: route.polyline,
       fareAmount: route.fareAmount,
       distanceKm: route.distanceKm,
       estimatedDurationMinutes: route.estimatedDurationMinutes,

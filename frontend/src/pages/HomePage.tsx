@@ -51,6 +51,16 @@ const HomePage = () => {
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
+  // Fetch all routes with their polylines and colors
+  const { data: routesData = [] } = useQuery({
+    queryKey: ['routes-with-polylines'],
+    queryFn: async () => {
+      const response = await axiosInstance.get('/api/routes');
+      // backend returns { success, data: [...], pagination }
+      return response.data.data as any[];
+    },
+  });
+
   return (
     <div className="flex h-[calc(100vh-8rem)] relative">
       {/* Mobile Route List */}
@@ -87,6 +97,7 @@ const HomePage = () => {
       <div className="flex-1 relative">
         <MapView
           buses={Array.isArray(buses) ? buses : []}
+          routes={Array.isArray(routesData) ? routesData : []}
           onBusClick={setSelectedBus}
         />
 

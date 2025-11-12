@@ -17,8 +17,8 @@ const sampleUsers = [
 ];
 
 const sampleRoutes = [
-  { id: 1, name: 'Nyabugogo - City Center', fareAmount: 500, distanceKm: 6.2, estimatedDurationMinutes: 18 },
-  { id: 2, name: 'Remera - Kimironko', fareAmount: 300, distanceKm: 4.5, estimatedDurationMinutes: 12 },
+  { id: 1, name: 'Nyabugogo - City Center', fareAmount: 500, distanceKm: 6.2, estimatedDurationMinutes: 18, color: '#FF6B6B', polyline: 'oxluEp~aaTjA~@tA`ArC|BxF' },
+  { id: 2, name: 'Remera - Kimironko', fareAmount: 300, distanceKm: 4.5, estimatedDurationMinutes: 12, color: '#4ECDC4', polyline: 'ofluEfrcaTvA|@~@pA' },
 ];
 
 const sampleStops = [
