@@ -4,6 +4,7 @@ import { axiosInstance } from '@/lib/axios';
 import { Bus } from '@/types';
 import { MapView } from '@/components/map/MapView';
 import { RouteList } from '@/components/routes/RouteList';
+import { RouteDetailsDialog } from '@/components/routes/RouteDetailsDialog';
 import { BusInfoPanel } from '@/components/bus/BusInfoPanel';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -39,6 +40,7 @@ function DashboardShortcut() {
 
 const HomePage = () => {
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<any>(null);
 
   const { data: buses = [] } = useQuery({
     queryKey: ['active-buses'],
@@ -65,7 +67,7 @@ const HomePage = () => {
                 <SheetTitle>Routes</SheetTitle>
               </SheetHeader>
               <div className="mt-4 overflow-y-auto max-h-[calc(100vh-8rem)]">
-                <RouteList />
+                <RouteList onSelectRoute={setSelectedRoute} />
               </div>
           </SheetContent>
         </Sheet>
@@ -77,7 +79,7 @@ const HomePage = () => {
           {/* Dashboard shortcut shown only when user is authenticated - placed above routes list */}
           <DashboardShortcut />
           <h2 className="text-xl font-bold mb-4">Routes</h2>
-          <RouteList />
+          <RouteList onSelectRoute={setSelectedRoute} />
         </div>
       </aside>
 
@@ -95,6 +97,9 @@ const HomePage = () => {
           </div>
         )}
       </div>
+
+      {/* Route Details Dialog - rendered at top level to appear above map */}
+      <RouteDetailsDialog open={!!selectedRoute} onClose={() => setSelectedRoute(null)} route={selectedRoute} />
     </div>
   );
 };

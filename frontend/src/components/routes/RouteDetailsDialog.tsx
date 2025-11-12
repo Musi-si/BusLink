@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -14,7 +14,8 @@ export const RouteDetailsDialog: React.FC<Props> = ({ open, onClose, route }) =>
 
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogPortal>
+        <DialogContent className="max-w-2xl z-[9999]">
         <DialogHeader>
           <DialogTitle>{route.name || 'Route Details'}</DialogTitle>
         </DialogHeader>
@@ -45,7 +46,8 @@ export const RouteDetailsDialog: React.FC<Props> = ({ open, onClose, route }) =>
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>
         </DialogFooter>
-      </DialogContent>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };

@@ -8,7 +8,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import RouteDetailsDialog from './RouteDetailsDialog';
 import { useState } from 'react';
 
-export const RouteList = () => {
+type RouteListProps = {
+  onSelectRoute?: (route: any) => void;
+};
+
+export const RouteList = ({ onSelectRoute }: RouteListProps) => {
   const [selectedRoute, setSelectedRoute] = useState<any>(null);
 
   const { data: routes, isLoading } = useQuery({
@@ -70,15 +74,13 @@ export const RouteList = () => {
             size="sm"
             variant="outline"
             className="w-full mt-3"
-            onClick={() => setSelectedRoute(route)}
+            onClick={() => onSelectRoute?.(route)}
           >
             View Details
           </Button>
         </Card>
         </>
       ))}
-
-      <RouteDetailsDialog open={!!selectedRoute} onClose={() => setSelectedRoute(null)} route={selectedRoute} />
     </div>
   );
 };
